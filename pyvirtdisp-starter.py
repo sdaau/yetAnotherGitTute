@@ -19,12 +19,17 @@ Note that in Gnome, the file manager would typically also control the desktop - 
 
 That is why, in this case a different file manager is used, to be opened in Xephyr. The `nemo` file manager was used, because it is somewhat simpler than `nautilus`, and it also has an "embedded terminal" addon, unlike `pcmanfm`; to install on Ubuntu 14.04, check http://www.webupd8.org/2014/04/install-nemo-220-with-unity-patches-in.html
 
+However, `nemo` when opened as first in a DISPLAY, it blocks, and takes over the desktop - so all other `nemo` processes, started afterward, will run under it (so they don't block when run, but exit immediately after their windows are shown) - regardless of their individual DISPLAY setting (and if all the instances are started with `--no-desktop`)! And same goes for newer nemo (nemo 3.2.2) and nautilus! `pcmanfm` can get around this, though...
+
 As a git GUI client, `giggle` can be easily set to show history, file tree, and open a text file; for other git GUI clients, see https://git-scm.com/downloads/guis/
+
+* Note: this script assumes that python2.7/dist-packages/pyvirtualdisplay/xephyr.py has been modified, so Xephyr is started with `-ac` (to allow X forwarding via ssh, see https://askubuntu.com/q/116936), and `-resizeable` (to allow to resize the window)
 
 Python requirements for this script:
 
 * pyvirtualdisplay - for install, see https://github.com/ponty/PyVirtualDisplay#ubuntu-1404
 * pyxhook - sudo pip install pyxhook (there is also keyboard - `sudo pip install keyboard`; unfortunately, it needs `sudo` to run on Linux)
+* pexpect - sudo pip install pexpect
 
 """
 
@@ -35,13 +40,14 @@ import time
 import os
 import pyxhook
 import subprocess
-
+import pexpect
+import getpass
 
 # This function is called every time a key is presssed
 def kbevent(event):
   global running
   # print key info
-  print(event)
+  #~ print(event)
 
   # If the ascii value matches spacebar, terminate the while loop
   if event.Ascii == 27: # (Escape); was - 32: # (Space)
@@ -49,15 +55,6 @@ def kbevent(event):
 
 
 if __name__ == "__main__":
-  # Create hookmanager
-  hookman = pyxhook.HookManager()
-  # Define our callback to fire when a key is pressed down
-  hookman.KeyDown = kbevent
-  # Hook the keyboard
-  hookman.HookKeyboard()
-  # Start our listener
-  hookman.start()
-
   # get available window dimenstions
   xcommand = "xprop -root _NET_WORKAREA"
   xoutput = subprocess.Popen(["bash", "-c", xcommand], stdout=subprocess.PIPE)
@@ -70,23 +67,89 @@ if __name__ == "__main__":
   print("w, h deskhalf {} {}".format(wdeskhalf, hdeskhalf))
   origdisplay = os.environ['DISPLAY'] # expecting :0.0 here
   print("** display is: "+origdisplay + " " + os.environ['MATE_DESKTOP_SESSION_ID'] + " " + os.environ['DESKTOP_SESSION'] + " " + os.environ['XDG_CURRENT_DESKTOP'])
+  os.environ['NEMO_ACTION_VERBOSE'] = "1"
+
+  # to reuse ssh connections; this:
+#  MYSSHCONFFILESTR="""
+#host *
+#    controlmaster auto
+#    controlpath /tmp/ssh-%r@%h:%p
+#"""
+#  with open("ssh.config", "w") as text_file:
+#    text_file.write(MYSSHCONFFILESTR)
+  # ... unfortunately, if we reuse, then we cannot control the DISPLAY of the X11 forwarding, which need to be separate; so instead of reusing connection via ssh.config, just feed the password we'll obtain (sshpwd below)
+  # pxssh can't really be set to use this config file;
+  # try make an ssh connection with pexpect (check pexpect examples/ssh_tunnel.py)
+  curuser = getpass.getuser()
+  print("For the ssh connection to this machine as current user: {}@localhost".format(curuser))
+  sshpwd = getpass.getpass('Enter password: ')
+
+  # even if this does run, if we reuse connections, then we don't have the right DISPLAY
+  # starter_ssh_cmd = "ssh -F ssh.config -XC -c blowfish {}@localhost".format(curuser)
+  # try:
+  #   ssh_starter = pexpect.spawn(starter_ssh_cmd)
+  #   ssh_starter.expect('password: ')
+  #   print('(sleeping a bit after expecting password: ...)')
+  #   time.sleep(0.1)
+  #   ssh_starter.sendline(sshpwd)
+  #   print('(after sendline  ...)')
+  #   #time.sleep(60) # Cygwin is slow to update process status.
+  #   time.sleep(5) # also on linux, tends to wait here a lot more than the timeout
+  #   ssh_starter.expect(pexpect.EOF)
+  # except Exception as e:
+  #   print("Got Exception: " + str(e))
 
   disps = []
   easyprocs = []
+  sshconns = []
+
+  # Create hookmanager # only after the keyboard passwording stuff is done!
+  hookman = pyxhook.HookManager()
+  # Define our callback to fire when a key is pressed down
+  hookman.KeyDown = kbevent
+  # Hook the keyboard
+  hookman.HookKeyboard()
+  # Start our listener
+  hookman.start()
 
   def AddDisplay():
     global disps, easyprocs
     disp = SmartDisplay(visible=1, size=(wdeskhalf, hdeskhalf)).start()
     print("** AddDisplay is: "+os.environ['DISPLAY'] + " " + os.environ['MATE_DESKTOP_SESSION_ID'] + " " + os.environ['DESKTOP_SESSION'] + " " + os.environ['XDG_CURRENT_DESKTOP'])
     disps.append(disp)
-    mycmd='nemo --no-desktop /tmp'
+    #
+    #mycmd='bash -c "echo AAA >> /tmp/test.log"' # shell redir has to be called like this!
+    #
+    # unfortunately, we cannot just call `nemo` here like the usual:
+    #~ mycmd='nemo --no-desktop --display='+os.environ['DISPLAY']+' /tmp'
+    #~ print("mycmd: {}".format(mycmd))
+    #~ nemocmdproc = EasyProcess(mycmd).start()
+    #~ easyprocs.append(nemocmdproc)
+    # - it will take over the first Xephyr window as desktop manager, and all subsequent `nemo`s will open there;
+    # however, we can use SSH X11 forwarding, which seems to fix that:
+    mycmd='ssh -XfC -c blowfish {}@localhost nemo'.format(curuser) #  -F ssh.config
     print("mycmd: {}".format(mycmd))
-    nemocmdproc = EasyProcess(mycmd).start()
-    easyprocs.append(nemocmdproc)
+    #gscmdproc = EasyProcess(mycmd).start()
+    #easyprocs.append(gscmdproc)
+    ssh_cmd = pexpect.spawn(mycmd)
+    ssh_cmd.expect('password: ')
+    time.sleep(0.1)
+    ssh_cmd.sendline(sshpwd) # don't wait after this for EOF?
+    ssh_cmd.expect(pexpect.EOF)
+    sshconns.append(ssh_cmd)
+    #
+    #~ mycmd='gnome-session'
+    #~ print("mycmd: {}".format(mycmd))
+    #~ gsesscmdproc = EasyProcess(mycmd).start()
+    #~ easyprocs.append(gsesscmdproc)
     mycmd='giggle /tmp'
     print("mycmd: {}".format(mycmd))
     gigglecmdproc = EasyProcess(mycmd).start()
     easyprocs.append(gigglecmdproc)
+    #~ mycmd='gnome-terminal'
+    #~ print("mycmd: {}".format(mycmd))
+    #~ termcmdproc = EasyProcess(mycmd).start()
+    #~ easyprocs.append(termcmdproc)
 
   AddDisplay()
   # "You have to do this between each new Display." https://stackoverflow.com/q/30168169/
@@ -103,6 +166,9 @@ if __name__ == "__main__":
   #nemocmdproc.stop(); gigglecmdproc.stop(); disp.stop()
   for easyproc in easyprocs: easyproc.stop()
   for disp in disps: disp.stop()
+  # also:
+  #~ ssh_starter.close(force=True)
+  for sshcmd in sshconns: sshcmd.close(force=True)
   # Close the listener when we are done
   hookman.cancel()
 
