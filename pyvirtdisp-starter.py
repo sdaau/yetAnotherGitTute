@@ -68,8 +68,8 @@ if __name__ == "__main__":
   wdeskhalf = xresparr[2]/2;
   hdeskhalf = xresparr[3]/2;
   print("w, h deskhalf {} {}".format(wdeskhalf, hdeskhalf))
-  thisdisplay = os.environ['DISPLAY']
-  print("display is: "+thisdisplay + " " + os.environ['MATE_DESKTOP_SESSION_ID'] + " " + os.environ['DESKTOP_SESSION'] + " " + os.environ['XDG_CURRENT_DESKTOP'])
+  origdisplay = os.environ['DISPLAY'] # expecting :0.0 here
+  print("** display is: "+origdisplay + " " + os.environ['MATE_DESKTOP_SESSION_ID'] + " " + os.environ['DESKTOP_SESSION'] + " " + os.environ['XDG_CURRENT_DESKTOP'])
 
   disps = []
   easyprocs = []
@@ -77,7 +77,7 @@ if __name__ == "__main__":
   def AddDisplay():
     global disps, easyprocs
     disp = SmartDisplay(visible=1, size=(wdeskhalf, hdeskhalf)).start()
-    print("display is: "+os.environ['DISPLAY'] + " " + os.environ['MATE_DESKTOP_SESSION_ID'] + " " + os.environ['DESKTOP_SESSION'] + " " + os.environ['XDG_CURRENT_DESKTOP'])
+    print("** AddDisplay is: "+os.environ['DISPLAY'] + " " + os.environ['MATE_DESKTOP_SESSION_ID'] + " " + os.environ['DESKTOP_SESSION'] + " " + os.environ['XDG_CURRENT_DESKTOP'])
     disps.append(disp)
     mycmd='nemo --no-desktop /tmp'
     print("mycmd: {}".format(mycmd))
@@ -89,6 +89,9 @@ if __name__ == "__main__":
     easyprocs.append(gigglecmdproc)
 
   AddDisplay()
+  # "You have to do this between each new Display." https://stackoverflow.com/q/30168169/
+  # (else the second window does not instantiate, and the programs for it go in the first window)
+  os.environ["DISPLAY"] = origdisplay
   AddDisplay()
 
   # Create a loop to keep the application running (for detecting keypresses
