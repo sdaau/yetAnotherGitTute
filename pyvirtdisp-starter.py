@@ -34,6 +34,7 @@ from pyvirtualdisplay.smartdisplay import SmartDisplay
 import time
 import os
 import pyxhook
+import subprocess
 
 
 # This function is called every time a key is presssed
@@ -57,13 +58,57 @@ if __name__ == "__main__":
   # Start our listener
   hookman.start()
 
-  disp = SmartDisplay(visible=1, size=(320, 240)).start()
+  # get available window dimenstions
+  xcommand = "xprop -root _NET_WORKAREA"
+  xoutput = subprocess.Popen(["bash", "-c", xcommand], stdout=subprocess.PIPE)
+  xresponse = xoutput.communicate()[0].decode("utf-8").strip()
+  xresparr = xresponse.split(' = ')[1].split(', ')
+  xresparr = list( map(int, xresparr) )
+  print("xresponse {}".format(xresparr)) # [0, 24, 1366, 743, 0, 24, 1366, 743, 0, 24, 1366, 743, 0, 24, 1366, 743] - for all four workspaces
+  wdeskhalf = xresparr[2]/2;
+  hdeskhalf = xresparr[3]/2;
+  print("w, h deskhalf {} {}".format(wdeskhalf, hdeskhalf))
+  thisdisplay = os.environ['DISPLAY']
+  print("display is: "+thisdisplay + " " + os.environ['MATE_DESKTOP_SESSION_ID'] + " " + os.environ['DESKTOP_SESSION'] + " " + os.environ['XDG_CURRENT_DESKTOP'])
+
+  disps = []
+  easyprocs = []
+
+  def AddDisplay():
+    global disps, easyprocs
+    disp = SmartDisplay(visible=1, size=(wdeskhalf, hdeskhalf)).start()
+    print("display is: "+os.environ['DISPLAY'] + " " + os.environ['MATE_DESKTOP_SESSION_ID'] + " " + os.environ['DESKTOP_SESSION'] + " " + os.environ['XDG_CURRENT_DESKTOP'])
+    disps.append(disp)
+    mycmd='nemo --no-desktop /tmp'
+    print("mycmd: {}".format(mycmd))
+    nemocmdproc = EasyProcess(mycmd).start()
+    easyprocs.append(nemocmdproc)
+    mycmd='giggle /tmp'
+    print("mycmd: {}".format(mycmd))
+    gigglecmdproc = EasyProcess(mycmd).start()
+    easyprocs.append(gigglecmdproc)
+
+  AddDisplay()
+  AddDisplay()
+
+  # Create a loop to keep the application running (for detecting keypresses
+  running = True
+  while running:
+    time.sleep(0.1)
+
+  # here we're out of the loop, stop everything
+  #nemocmdproc.stop(); gigglecmdproc.stop(); disp.stop()
+  for easyproc in easyprocs: easyproc.stop()
+  for disp in disps: disp.stop()
+  # Close the listener when we are done
+  hookman.cancel()
+
+
+"""
   #~ Display(visible=1, size=(320, 240)).start()
   #EasyProcess('startx').start()
   #EasyProcess('gnome-calculator').start()
   #~ time.sleep(2)
-  thisdisplay = os.environ['DISPLAY']
-  print("display is: "+thisdisplay + " " + os.environ['MATE_DESKTOP_SESSION_ID'] + " " + os.environ['DESKTOP_SESSION'] + " " + os.environ['XDG_CURRENT_DESKTOP'])
   #~ mycmd='caja --display='+thisdisplay+' --no-desktop /tmp'
   #~ mycmd='marco'
   #~ mycmd='marco --display='+thisdisplay+'.0'
@@ -71,21 +116,7 @@ if __name__ == "__main__":
   #~ EasyProcess(mycmd).start()
   #~ mycmd='caja --display='+thisdisplay+'.0 --no-desktop /tmp'
   #~ mycmd='pcmanfm /tmp'
-  mycmd='nemo --no-desktop /tmp'
-  print(mycmd)
-  nemocmdproc = EasyProcess(mycmd).start()
-  mycmd='giggle'
-  print(mycmd)
-  gigglecmdproc = EasyProcess(mycmd).start()
-
-  # Create a loop to keep the application running
-  running = True
-  while running:
-    time.sleep(0.1)
-
-  # Close the listener when we are done
-  hookman.cancel()
-
+"""
 
 
 """
