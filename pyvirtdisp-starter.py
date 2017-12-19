@@ -42,6 +42,7 @@ import pyxhook
 import subprocess
 import pexpect
 import getpass
+import gtk.gdk
 
 # This function is called every time a key is presssed
 def kbevent(event):
@@ -116,7 +117,7 @@ if __name__ == "__main__":
     global disps, easyprocs
     disp = SmartDisplay(visible=1, size=(wdeskhalf, hdeskhalf)).start()
     print("** AddDisplay is: "+os.environ['DISPLAY'] + " " + os.environ['MATE_DESKTOP_SESSION_ID'] + " " + os.environ['DESKTOP_SESSION'] + " " + os.environ['XDG_CURRENT_DESKTOP'])
-    disps.append(disp)
+    disps.append((disp, os.environ['DISPLAY']))
     #
     #mycmd='bash -c "echo AAA >> /tmp/test.log"' # shell redir has to be called like this!
     #
@@ -127,7 +128,9 @@ if __name__ == "__main__":
     #~ easyprocs.append(nemocmdproc)
     # - it will take over the first Xephyr window as desktop manager, and all subsequent `nemo`s will open there;
     # however, we can use SSH X11 forwarding, which seems to fix that:
-    mycmd='ssh -XfC -c blowfish {}@localhost nemo'.format(curuser) #  -F ssh.config
+    # however, we must have mate-session (or gnome-session) ran before that;
+    # else the wmctrl "cannot get client list properties"; mate-panel is not enough, but marco is (and it keeps small fonts - but adds titlebars)
+    mycmd='ssh -XfC -c blowfish {}@localhost marco'.format(curuser) #  -F ssh.config
     print("mycmd: {}".format(mycmd))
     #gscmdproc = EasyProcess(mycmd).start()
     #easyprocs.append(gscmdproc)
@@ -138,25 +141,92 @@ if __name__ == "__main__":
     ssh_cmd.expect(pexpect.EOF)
     sshconns.append(ssh_cmd)
     #
-    #~ mycmd='gnome-session'
-    #~ print("mycmd: {}".format(mycmd))
-    #~ gsesscmdproc = EasyProcess(mycmd).start()
-    #~ easyprocs.append(gsesscmdproc)
     mycmd='giggle /tmp'
     print("mycmd: {}".format(mycmd))
     gigglecmdproc = EasyProcess(mycmd).start()
     easyprocs.append(gigglecmdproc)
-    #~ mycmd='gnome-terminal'
-    #~ print("mycmd: {}".format(mycmd))
-    #~ termcmdproc = EasyProcess(mycmd).start()
-    #~ easyprocs.append(termcmdproc)
+    #
+    mycmd='ssh -XfC -c blowfish {}@localhost nemo /tmp'.format(curuser) #  -F ssh.config #  --no-desktop seems to have no effect here...
+    print("mycmd: {}".format(mycmd))
+    ssh_cmd2 = pexpect.spawn(mycmd)
+    ssh_cmd2.expect('password: ')
+    time.sleep(0.1)
+    ssh_cmd2.sendline(sshpwd) # don't wait after this for EOF?
+    ssh_cmd2.expect(pexpect.EOF)
+    sshconns.append(ssh_cmd2)
+    # #
+    # time.sleep(1) # wait for window to instantiate, else it is not listed
+    # rootw = gtk.gdk.get_default_root_window()
+    # # this lists only for DISPLAY=:0:
+    # ## for id in rootw.property_get('_NET_CLIENT_LIST')[2]:
+    # ##   w = gtk.gdk.window_foreign_new(id)
+    # ##   if w:
+    # ##     print("{} {}".format(id, w.property_get('WM_NAME')[2]))
+    # wcurrootdat = rootw.property_get("_NET_ACTIVE_WINDOW") # ('WINDOW', 32, [102760449]) - refers to 0x06200001 Xephyr on :1005.0 etc window ; 102760449 = 0x6200001
+    # wcurrootid = wcurrootdat[2][0]
+    # wr = gtk.gdk.window_foreign_new( wcurrootid )
+    # # w.set_decorations here changes the titlebar od the Xephyr window!
+    # thisdisp = gtk.gdk.Display(os.environ['DISPLAY'])
+    # print("wr {} {} // {} d {}".format(wcurrootdat, wr.get_decorations(), wr.get_children(), thisdisp )) # <flags 0 of type GdkWMDecoration> // [] empty here even w/ wait; at next toggle, flags GDK_DECOR_ALL
+    # winlist = EasyProcess('wmctrl -l').call().stdout # prints according to current DISPLAY
+    # print("winlist: {}".format(winlist))
+    # dispscr = thisdisp.get_default_screen()
+    # disprootw = dispscr.get_root_window()
+    # # ok, listing the right children under current DISPLAY with this:
+    # for id in disprootw.property_get('_NET_CLIENT_LIST')[2]:
+    #   w = gtk.gdk.window_foreign_new_for_display(thisdisp, id)
+    #   if w:
+    #     print("d {} {} {}".format(id, w.property_get('WM_NAME')[2], w.get_decorations()))
+    # # for line in iter(winlist.splitlines()):
+    # #   hexidstr = line.split()[0] # split() no args, split on whitespace
+    # #   hexid = int(hexidstr, 0) # "You must specify 0 as the base in order to invoke this prefix-guessing behavior"
+    # #   print("hex: {} {}".format(hexidstr, hexid))
+    # #   #~ w = gtk.gdk.window_foreign_new( hexid ) # cannot use this here, only for default DISPLAY
+    # #   w = gtk.gdk.window_foreign_new_for_display( thisdisp, hexid ) # this sorta works? but getting segfault later?
+    # #   print("w {} {}".format(w, w.get_decorations())) # <flags GDK_DECOR_ALL of type GdkWMDecoration>
+    # #   w.set_decorations( (w.get_decorations()+1)%2 ) # toggle between 0 and 1
+    # #   print("w {} {}".format(w, w.get_decorations())) #
+    # #~ gtk.gdk.window_process_all_updates() # this causes segfault ?!
+    # #~ gtk.gdk.flush() # this may actually effectuate no title bars, because at start, all of them show undecorated!
 
   AddDisplay()
   # "You have to do this between each new Display." https://stackoverflow.com/q/30168169/
   # (else the second window does not instantiate, and the programs for it go in the first window)
-  os.environ["DISPLAY"] = origdisplay
+  # time.sleep(1)
+  os.environ["DISPLAY"] = origdisplay # now that we mess with stuff, we get segfault here?!
   AddDisplay()
 
+  # instantiate first, then mess with decorations
+  time.sleep(3)
+  print("---")
+  gtk.gdk.window_process_all_updates()
+  gtk.gdk.flush() # doesn't do anything here..
+
+  for disp in disps:
+    thisdisp = gtk.gdk.Display(disp[1])
+    dispscr = thisdisp.get_default_screen()
+    print("d {} {} {} {} {}".format(disp[1], thisdisp, thisdisp.get_n_screens(), dispscr, dispscr.get_n_monitors()))
+    # disprootw = dispscr.get_root_window() # here segfault, assertion 'GDK_IS_SCREEN (screen)' failed - but only on second loop!
+  #   # # ok, listing the right children under current DISPLAY with this:
+  #   # for id in disprootw.property_get('_NET_CLIENT_LIST')[2]:
+  #   for w in dispscr.get_toplevel_windows():
+  #    # w = gtk.gdk.window_foreign_new_for_display(thisdisp, id)
+  #     if w:
+  #       id = w.xid # exists, but is the same for different displays ?! and WM_NAME is wrong, too!
+  #       print("  {} {} {} {}".format(disp[1], id, w.property_get('WM_NAME')[2], w.get_decorations()))
+  #   time.sleep(1)
+
+  for disp in disps:
+    os.environ["DISPLAY"] = disp[1]
+    winlist = EasyProcess('wmctrl -l').call().stdout # prints according to current DISPLAY
+    print("winlist: {}".format(winlist))
+    # to call with hex id, use wmctrl -i -r 0x00...
+    # Giggle is not maximised, so we can manipulate it immediately:
+    EasyProcess(['wmctrl', '-r', 'Giggle', '-e', '0,0,'+str(hdeskhalf/2)+','+str(wdeskhalf)+','+str(hdeskhalf/2)]).call()
+    # the nemo, however, is maximized, so we have to unmaximize it first
+    EasyProcess('wmctrl -r tmp -b remove,maximized_horz').call()
+    EasyProcess('wmctrl -r tmp -b remove,maximized_vert').call()
+    EasyProcess('wmctrl -r tmp -e 0,0,0,'+str(wdeskhalf)+','+str(hdeskhalf/2)).call()
   # Create a loop to keep the application running (for detecting keypresses
   running = True
   while running:
@@ -165,7 +235,7 @@ if __name__ == "__main__":
   # here we're out of the loop, stop everything
   #nemocmdproc.stop(); gigglecmdproc.stop(); disp.stop()
   for easyproc in easyprocs: easyproc.stop()
-  for disp in disps: disp.stop()
+  for disp in disps: disp[0].stop()
   # also:
   #~ ssh_starter.close(force=True)
   for sshcmd in sshconns: sshcmd.close(force=True)
@@ -185,6 +255,17 @@ if __name__ == "__main__":
   #~ EasyProcess(mycmd).start()
   #~ mycmd='caja --display='+thisdisplay+'.0 --no-desktop /tmp'
   #~ mycmd='pcmanfm /tmp'
+
+    #~ mycmd='gnome-session'
+    #~ print("mycmd: {}".format(mycmd))
+    #~ gsesscmdproc = EasyProcess(mycmd).start()
+    #~ easyprocs.append(gsesscmdproc)
+
+    #~ mycmd='gnome-terminal'
+    #~ print("mycmd: {}".format(mycmd))
+    #~ termcmdproc = EasyProcess(mycmd).start()
+    #~ easyprocs.append(termcmdproc)
+
 """
 
 
