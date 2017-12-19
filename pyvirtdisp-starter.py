@@ -44,6 +44,9 @@ import pexpect
 import getpass
 import gtk.gdk
 
+import Xlib
+import Xlib.display
+
 # This function is called every time a key is presssed
 def kbevent(event):
   global running
@@ -130,7 +133,8 @@ if __name__ == "__main__":
     # however, we can use SSH X11 forwarding, which seems to fix that:
     # however, we must have mate-session (or gnome-session) ran before that;
     # else the wmctrl "cannot get client list properties"; mate-panel is not enough, but marco is (and it keeps small fonts - but adds titlebars)
-    mycmd='ssh -XfC -c blowfish {}@localhost marco'.format(curuser) #  -F ssh.config
+    mycmd='ssh -XfC -c blowfish {}@localhost marco --replace --no-composite'.format(curuser) #  -F ssh.config
+    #mycmd='ssh -XfC -c blowfish {}@localhost tinywm'.format(curuser) #  -F ssh.config # tinywm is so tiny, lists of windows are not managed
     print("mycmd: {}".format(mycmd))
     #gscmdproc = EasyProcess(mycmd).start()
     #easyprocs.append(gscmdproc)
@@ -146,14 +150,19 @@ if __name__ == "__main__":
     gigglecmdproc = EasyProcess(mycmd).start()
     easyprocs.append(gigglecmdproc)
     #
-    mycmd='ssh -XfC -c blowfish {}@localhost nemo /tmp'.format(curuser) #  -F ssh.config #  --no-desktop seems to have no effect here...
+    #~ mycmd='ssh -XfC -c blowfish {}@localhost nemo /tmp'.format(curuser) #  -F ssh.config #  --no-desktop seems to have no effect here...
+    #~ print("mycmd: {}".format(mycmd))
+    #~ ssh_cmd2 = pexpect.spawn(mycmd)
+    #~ ssh_cmd2.expect('password: ')
+    #~ time.sleep(0.1)
+    #~ ssh_cmd2.sendline(sshpwd) # don't wait after this for EOF?
+    #~ ssh_cmd2.expect(pexpect.EOF)
+    #~ sshconns.append(ssh_cmd2)
+    #
+    mycmd='pcmanfm /tmp'
     print("mycmd: {}".format(mycmd))
-    ssh_cmd2 = pexpect.spawn(mycmd)
-    ssh_cmd2.expect('password: ')
-    time.sleep(0.1)
-    ssh_cmd2.sendline(sshpwd) # don't wait after this for EOF?
-    ssh_cmd2.expect(pexpect.EOF)
-    sshconns.append(ssh_cmd2)
+    pcmancmdproc = EasyProcess(mycmd).start()
+    easyprocs.append(pcmancmdproc)
     # #
     # time.sleep(1) # wait for window to instantiate, else it is not listed
     # rootw = gtk.gdk.get_default_root_window()
@@ -199,6 +208,11 @@ if __name__ == "__main__":
   # instantiate first, then mess with decorations
   time.sleep(3)
   print("---")
+  #gtk.gdk.DisplayManager.list_displays() #descriptor 'list_displays' of 'gtk.gdk.DisplayManager' object needs an argument
+  gDMo = gtk.gdk.display_manager_get()
+  print("{} {}".format(gDMo, dir(gDMo)))
+  gDMo.list_displays()
+  print("---")
   gtk.gdk.window_process_all_updates()
   gtk.gdk.flush() # doesn't do anything here..
 
@@ -224,9 +238,12 @@ if __name__ == "__main__":
     # Giggle is not maximised, so we can manipulate it immediately:
     EasyProcess(['wmctrl', '-r', 'Giggle', '-e', '0,0,'+str(hdeskhalf/2)+','+str(wdeskhalf)+','+str(hdeskhalf/2)]).call()
     # the nemo, however, is maximized, so we have to unmaximize it first
-    EasyProcess('wmctrl -r tmp -b remove,maximized_horz').call()
-    EasyProcess('wmctrl -r tmp -b remove,maximized_vert').call()
-    EasyProcess('wmctrl -r tmp -e 0,0,0,'+str(wdeskhalf)+','+str(hdeskhalf/2)).call()
+    #~ EasyProcess('wmctrl -r tmp -b remove,maximized_horz').call()
+    #~ EasyProcess('wmctrl -r tmp -b remove,maximized_vert').call()
+    #~ EasyProcess('wmctrl -r tmp -e 0,0,0,'+str(wdeskhalf)+','+str(hdeskhalf/2)).call()
+
+  display = Xlib.display.Display()
+
   # Create a loop to keep the application running (for detecting keypresses
   running = True
   while running:
