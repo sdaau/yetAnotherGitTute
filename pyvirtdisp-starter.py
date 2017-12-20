@@ -7,14 +7,18 @@
 """
 This script starts a Xephyr window via pyvirtualdisplay; in which it instantiates:
 
-* A `nemo` file manager window, showing /tmp
+* A `pcmanfm` file manager window, showing /tmp
+* A `gnome-terminal` window, showing /tmp
 * A `giggle` Git GUI client window, also started at /tmp (which will not be a .git repository, so not the entire window will be shown at start)
 
 Then you can navigate manually to the right locations in these windows.
 
 The Xephyr window should start with quarter size of the available desktop (queried via `xprop -root _NET_WORKAREA`).
 
+When the windows are instantiated, you should be able to use Ctrl+Alt+Space to take a screenshot of all the windows, which will be numbered (numbers are reset at each run of the application), which will be stored in the `img/` subfolder of this directory (will be created if it does not exist).
+
 Tested on Ubuntu 14.04, MATE desktop.
+
 Note that in Gnome, the file manager would typically also control the desktop - so the file manager that is currently in control of the desktop, cannot be opened in a Xephyr window; which is why MATE's file manager [Caja cannot run in Xephyr/pyvirtualdisplay, even with explicitly set display · Issue #886 · mate-desktop/caja](https://github.com/mate-desktop/caja/issues/886)
 
 That is why, in this case a different file manager is used, to be opened in Xephyr. The `nemo` file manager was used, because it is somewhat simpler than `nautilus`, and it also has an "embedded terminal" addon, unlike `pcmanfm`; to install on Ubuntu 14.04, check http://www.webupd8.org/2014/04/install-nemo-220-with-unity-patches-in.html
@@ -23,8 +27,11 @@ However, `nemo` when opened as first in a DISPLAY, it blocks, and takes over the
 
 As a git GUI client, `giggle` can be easily set to show history, file tree, and open a text file; for other git GUI clients, see https://git-scm.com/downloads/guis/
 
-* This script assumes that python2.7/dist-packages/pyvirtualdisplay/xephyr.py has been modified, so Xephyr is started with `-ac` (to allow X forwarding via ssh, see https://askubuntu.com/q/116936), and `-resizeable` (to allow to resize the window) - please check/apply the patch file `pyvirtualdisplay.patch`, available in this directory
+Requirements/dependencies for this script:
+
+* This script assumes that python2.7/dist-packages/pyvirtualdisplay/xephyr.py has been modified, so Xephyr is started with `-ac` (to allow X forwarding via ssh, see https://askubuntu.com/q/116936), and `-resizeable` (to allow to resize the window), and with hacks for position available on newer Xephyr - please check/apply the patch file `pyvirtualdisplay.patch`, available in this directory
 * This script needs the `toggle-decorations` executable, which should be built from the `toggle-decorations.c` file in this directory (see inside that file, for instructions on how to build with gcc)
+* This script runs `ssh` to do X11 forwarding, so `sudo apt-get install openssh-client` is a dependency
 
 Python requirements for this script:
 
@@ -33,6 +40,12 @@ Python requirements for this script:
 
 * pyxhook - sudo pip install pyxhook (there is also keyboard - `sudo pip install keyboard`; unfortunately, it needs `sudo` to run on Linux)
 * pexpect - sudo pip install pexpect
+
+Note: some windows may fail to instantiate, if you have them hanging in the process list; e.g.
+  $ ps axf | grep -v grep | grep pcmanfm
+  31851 pts/2    Sl+    0:00  |           \_ pcmanfm /tmp  # parented to a pyvirtdisp-starter
+  32084 pts/2    Sl     0:01 pcmanfm /tmp  # "hanging" process
+... in which case they should be manually removed, e.g. `kill -9 32084`
 
 """
 
@@ -162,6 +175,7 @@ if __name__ == "__main__":
     ssh_cmd.expect('password: ')
     time.sleep(0.1)
     ssh_cmd.sendline(sshpwd) # don't wait after this for EOF?
+    time.sleep(0.25)
     ssh_cmd.expect(pexpect.EOF)
     sshconns.append(ssh_cmd)
     time.sleep(0.1)
@@ -233,14 +247,15 @@ if __name__ == "__main__":
   # Create a loop to keep the application running (for detecting keypresses
   running = True
   while running:
-    time.sleep(0.1)
+    time.sleep(0.5)
 
   # here we're out of the loop, stop everything
   #nemocmdproc.stop(); gigglecmdproc.stop(); disp.stop()
-  for easyproc in easyprocs: easyproc.stop()
-  for disp in disps: disp[0].stop()
-  # also:
   for sshcmd in sshconns: sshcmd.close(force=True)
+  for easyproc in easyprocs: easyproc.stop()
+  for disp in disps:
+    print("disp: {}".format(disp))
+    disp[0].stop() # can cause, on the last entry: `Fatal IO error 11 (Resource temporarily unavailable) on X server :1013.`
   # Close the listener when we are done
   hookman.cancel()
 
