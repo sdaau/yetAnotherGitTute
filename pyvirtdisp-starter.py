@@ -51,6 +51,11 @@ THIS_SCRIPT_DIR = os.path.dirname( os.path.abspath(os.path.realpath(__file__)) )
 os.chdir(THIS_SCRIPT_DIR)
 print("Running from dir: {}".format(os.getcwd()))
 
+IMGDIR=os.path.join(THIS_SCRIPT_DIR, "img")
+if not os.path.exists(IMGDIR):
+  print("Creating dir {}".format(IMGDIR))
+  os.makedirs(IMGDIR)
+
 # This function is called every time a key is presssed
 def kbevent(event):
   global running
@@ -60,6 +65,8 @@ def kbevent(event):
   # If the ascii value matches spacebar, terminate the while loop
   if event.Ascii == 27: # (Escape); was - 32: # (Space)
     running = False
+  elif event.Ascii == 83: # (S = shift+s);
+    print("SCREENSHOT!")
 ########## end kbevent
 
 
