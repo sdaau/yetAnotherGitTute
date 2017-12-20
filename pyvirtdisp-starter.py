@@ -64,19 +64,29 @@ disps = []
 easyprocs = []
 sshconns = []
 
-
+ISCTRL=False
+ISALT=False
 # This function is called every time a key is presssed
-def kbevent(event):
-  global running
+def kbeventKeyDown(event):
+  global running, ISCTRL, ISALT
   # print key info
   #~ print(event)
 
   # If the ascii value matches spacebar, terminate the while loop
   if event.Ascii == 27: # (Escape); was - 32: # (Space)
     running = False
-  elif event.Ascii == 83: # (S = shift+s);
-    TakeScreenshots()
-########## end kbevent
+  elif event.Ascii == 227 or event.Ascii == 228: # (Control_L, Control_R);
+    ISCTRL = True
+  elif event.Ascii == 233 or event.Ascii == 234: # (Alt_L, Alt_R);
+    ISALT = True
+  #elif event.Ascii == 83: # (S = shift+s); # may block with modifier keys?
+  elif event.Ascii == 32: # (space);
+    if ISCTRL and ISALT: # so, react on Ctrl-Alt-Space:
+      TakeScreenshots()
+      # since this reacts only on keydown, reset these two as well:
+      ISCTRL=False
+      ISALT=False
+########## end kbeventKeyDown
 
 NUMSCREENSHOTS=0
 
@@ -119,7 +129,7 @@ if __name__ == "__main__":
   # Create hookmanager # only after the keyboard passwording stuff is done!
   hookman = pyxhook.HookManager()
   # Define our callback to fire when a key is pressed down
-  hookman.KeyDown = kbevent
+  hookman.KeyDown = kbeventKeyDown
   # Hook the keyboard
   hookman.HookKeyboard()
   # Start our listener
