@@ -1,0 +1,75 @@
+diff -Naur '--exclude=*.pyc' /tmp/old/PyVirtualDisplay-0.2.1/pyvirtualdisplay/abstractdisplay.py /usr/local/lib/python2.7/dist-packages/pyvirtualdisplay/abstractdisplay.py
+--- /tmp/old/PyVirtualDisplay-0.2.1/pyvirtualdisplay/abstractdisplay.py	2016-10-03 19:06:46.000000000 +0200
++++ /usr/local/lib/python2.7/dist-packages/pyvirtualdisplay/abstractdisplay.py	2017-12-19 12:34:45.625627513 +0100
+@@ -59,6 +59,7 @@
+         names = fnmatch.filter(os.listdir(tmpdir), pattern)
+         ls = [os.path.join(tmpdir, child) for child in names]
+         ls = [p for p in ls if os.path.isfile(p)]
++        print("ls " + str(ls))
+         return ls
+ 
+     def search_for_display(self):
+diff -Naur '--exclude=*.pyc' /tmp/old/PyVirtualDisplay-0.2.1/pyvirtualdisplay/display.py /usr/local/lib/python2.7/dist-packages/pyvirtualdisplay/display.py
+--- /tmp/old/PyVirtualDisplay-0.2.1/pyvirtualdisplay/display.py	2016-10-03 19:06:46.000000000 +0200
++++ /usr/local/lib/python2.7/dist-packages/pyvirtualdisplay/display.py	2017-12-20 10:53:42.228970434 +0100
+@@ -14,8 +14,9 @@
+     :param visible: True -> Xephyr, False -> Xvfb
+     :param backend: 'xvfb', 'xvnc' or 'xephyr', ignores ``visible``
+     :param xauth: If a Xauthority file should be created.
++    :param position: only for newer Xephyr
+     '''
+-    def __init__(self, backend=None, visible=False, size=(1024, 768), color_depth=24, bgcolor='black', use_xauth=False, **kwargs):
++    def __init__(self, backend=None, visible=False, size=(1024, 768), color_depth=24, bgcolor='black', use_xauth=False, position=(0,0), **kwargs):
+         self.color_depth = color_depth
+         self.size = size
+         self.bgcolor = bgcolor
+@@ -24,6 +25,7 @@
+         self.display = None
+         self.visible = visible
+         self.backend = backend
++        self.position = position
+ 
+         if not self.backend:
+             if self.visible:
+@@ -35,6 +37,7 @@
+             size=size,
+             color_depth=color_depth,
+             bgcolor=bgcolor,
++            position=position,
+             **kwargs)
+         AbstractDisplay.__init__(self, use_xauth=use_xauth)
+ 
+diff -Naur '--exclude=*.pyc' /tmp/old/PyVirtualDisplay-0.2.1/pyvirtualdisplay/xephyr.py /usr/local/lib/python2.7/dist-packages/pyvirtualdisplay/xephyr.py
+--- /tmp/old/PyVirtualDisplay-0.2.1/pyvirtualdisplay/xephyr.py	2014-04-09 15:00:04.000000000 +0200
++++ /usr/local/lib/python2.7/dist-packages/pyvirtualdisplay/xephyr.py	2017-12-20 10:49:56.952352634 +0100
+@@ -12,7 +12,7 @@
+ 
+     Xephyr is an X server outputting to a window on a pre-existing X display
+     '''
+-    def __init__(self, size=(1024, 768), color_depth=24, bgcolor='black'):
++    def __init__(self, size=(1024, 768), color_depth=24, bgcolor='black', position=(0,0)):
+         '''
+         :param bgcolor: 'black' or 'white'
+         '''
+@@ -22,6 +22,7 @@
+         self.screen = 0
+         self.process = None
+         self.display = None
++        self.position = position
+         AbstractDisplay.__init__(self)
+ 
+     @classmethod
+@@ -32,9 +33,12 @@
+     @property
+     def _cmd(self):
+         cmd = [PROGRAM,
++               '-ac',
+                dict(black='-br', white='-wr')[self.bgcolor],
+                '-screen',
+-               'x'.join(map(str, list(self.size) + [self.color_depth])),
++               #'x'.join(map(str, list(self.size) + [self.color_depth])),
++               '{}x{}+{}+{}x{}'.format( *(list(self.size)+list(self.position)+[self.color_depth]) ), # *unpack list for format args
++               '-resizeable',
+                self.new_display_var,
+                ]
+         return cmd

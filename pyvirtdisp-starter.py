@@ -23,7 +23,7 @@ However, `nemo` when opened as first in a DISPLAY, it blocks, and takes over the
 
 As a git GUI client, `giggle` can be easily set to show history, file tree, and open a text file; for other git GUI clients, see https://git-scm.com/downloads/guis/
 
-* This script assumes that python2.7/dist-packages/pyvirtualdisplay/xephyr.py has been modified, so Xephyr is started with `-ac` (to allow X forwarding via ssh, see https://askubuntu.com/q/116936), and `-resizeable` (to allow to resize the window) - TODO: please check/apply the patch `pyvirtualdisplay.patch` in this directory
+* This script assumes that python2.7/dist-packages/pyvirtualdisplay/xephyr.py has been modified, so Xephyr is started with `-ac` (to allow X forwarding via ssh, see https://askubuntu.com/q/116936), and `-resizeable` (to allow to resize the window) - please check/apply the patch file `pyvirtualdisplay.patch`, available in this directory
 * This script needs the `toggle-decorations` executable, which should be built from the `toggle-decorations.c` file in this directory (see inside that file, for instructions on how to build with gcc)
 
 Python requirements for this script:
@@ -102,8 +102,8 @@ if __name__ == "__main__":
   xresparr = xresponse.split(' = ')[1].split(', ')
   xresparr = list( map(int, xresparr) )
   print("xresponse {}".format(xresparr)) # [0, 24, 1366, 743, 0, 24, 1366, 743, 0, 24, 1366, 743, 0, 24, 1366, 743] - for all four workspaces
-  wdeskhalf = xresparr[2]/2;
-  hdeskhalf = xresparr[3]/2;
+  wdeskhalf = int(xresparr[2]/2);
+  hdeskhalf = int(xresparr[3]/2);
   print("w, h deskhalf {} {}".format(wdeskhalf, hdeskhalf))
   origdisplay = os.environ['DISPLAY'] # expecting :0.0 here
   print("** display is: "+origdisplay + " " + os.environ['MATE_DESKTOP_SESSION_ID'] + " " + os.environ['DESKTOP_SESSION'] + " " + os.environ['XDG_CURRENT_DESKTOP'])
@@ -125,9 +125,14 @@ if __name__ == "__main__":
   # Start our listener
   hookman.start()
 
+  def get_bit(byteval,idx): # SO: 2591483
+    return int((byteval&(1<<idx))!=0);
+
   def AddDisplay():
-    global disps, easyprocs
-    disp = SmartDisplay(visible=1, size=(wdeskhalf, hdeskhalf)).start()
+    global disps, easyprocs, sshconns
+    numdispwins = len(disps)
+    mypos = ( (numdispwins%2)*wdeskhalf, get_bit(numdispwins,1)*hdeskhalf )
+    disp = SmartDisplay(visible=1, size=(wdeskhalf, hdeskhalf), position=mypos).start()
     print("** AddDisplay is: "+os.environ['DISPLAY'] + " " + os.environ['MATE_DESKTOP_SESSION_ID'] + " " + os.environ['DESKTOP_SESSION'] + " " + os.environ['XDG_CURRENT_DESKTOP'])
     disps.append((disp, os.environ['DISPLAY']))
     #
@@ -206,6 +211,7 @@ if __name__ == "__main__":
     EasyProcess('wmctrl -r tmp -b remove,maximized_vert').call()
     EasyProcess( 'wmctrl -r tmp -e 0,0,0,{},{}'.format(int(wdeskhalf*wp1), int(hdeskhalf*hp1)) ).call()
     # Giggle/Terminal is not maximised, so we can manipulate it immediately:
+    #  also, for some reason, the terminal is smaller in height than needed (maybe due to removed decorations?), so there's a bit of a gap
     EasyProcess([ 'wmctrl', '-r', 'Terminal', '-e', '0,0,{},{},{}'.format(int(hdeskhalf*hp1), int(wdeskhalf*wp1), int(hdeskhalf*hp2)) ]).call()
     # Note: the calc is correct, but in this setup, giggle will not scale down in width
     #  below its own minimal width, so it will be wider than wdeskhalf*wp2;
