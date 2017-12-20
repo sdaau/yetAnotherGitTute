@@ -154,6 +154,7 @@ if __name__ == "__main__":
   def AddDisplay():
     global disps, easyprocs, sshconns
     numdispwins = len(disps)
+    if numdispwins > 0: numdispwins += 1 # this hack, so we have first top left, second bottom left, third bottom right
     mypos = ( (numdispwins%2)*wdeskhalf, get_bit(numdispwins,1)*hdeskhalf )
     disp = SmartDisplay(visible=1, size=(wdeskhalf, hdeskhalf), position=mypos).start()
     print("** AddDisplay is: "+os.environ['DISPLAY'] + " " + os.environ['MATE_DESKTOP_SESSION_ID'] + " " + os.environ['DESKTOP_SESSION'] + " " + os.environ['XDG_CURRENT_DESKTOP'])
@@ -198,10 +199,9 @@ if __name__ == "__main__":
     easyprocs.append(termcmdproc)
 
   AddDisplay()
+  time.sleep(0.2)
   # "You have to do this between each new Display." https://stackoverflow.com/q/30168169/
   # (else the second window does not instantiate, and the programs for it go in the first window)
-  # time.sleep(1)
-  time.sleep(0.2)
   os.environ["DISPLAY"] = origdisplay # now that we mess with stuff, we (might) get segfault here?!
   AddDisplay()
   time.sleep(0.2)
@@ -244,7 +244,7 @@ if __name__ == "__main__":
     #  (Alt+LeftClick works, when Xephyr window 'grabs mouse and keyboard')
     EasyProcess([ 'wmctrl', '-r', 'Giggle', '-e', '0,{},0,{},{}'.format(int(wdeskhalf*wp1), int(wdeskhalf*wp2), hdeskhalf) ]).call()
 
-  # Create a loop to keep the application running (for detecting keypresses
+  # Create a loop to keep the application running (for detecting keypresses)
   running = True
   while running:
     time.sleep(0.5)
@@ -255,7 +255,7 @@ if __name__ == "__main__":
   for easyproc in easyprocs: easyproc.stop()
   for disp in disps:
     print("disp: {}".format(disp))
-    disp[0].stop() # can cause, on the last entry: `Fatal IO error 11 (Resource temporarily unavailable) on X server :1013.`
+    disp[0].stop() # can cause, on the last entry: `Fatal IO error 11 (Resource temporarily unavailable) on X server :1013.`; in stop() method, `EasyProcess.stop(self)` kills last window, and by the time it gets to `if self.use_xauth:`, we get the `Fatal IO error 11..` - have no idea how to solve this atm, but it does not interfere with operation much, so can be ignored for the time being...
   # Close the listener when we are done
   hookman.cancel()
 
