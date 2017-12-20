@@ -19,16 +19,18 @@ Note that in Gnome, the file manager would typically also control the desktop - 
 
 That is why, in this case a different file manager is used, to be opened in Xephyr. The `nemo` file manager was used, because it is somewhat simpler than `nautilus`, and it also has an "embedded terminal" addon, unlike `pcmanfm`; to install on Ubuntu 14.04, check http://www.webupd8.org/2014/04/install-nemo-220-with-unity-patches-in.html
 
-However, `nemo` when opened as first in a DISPLAY, it blocks, and takes over the desktop - so all other `nemo` processes, started afterward, will run under it (so they don't block when run, but exit immediately after their windows are shown) - regardless of their individual DISPLAY setting (and if all the instances are started with `--no-desktop`)! And same goes for newer nemo (nemo 3.2.2) and nautilus! `pcmanfm` can get around this, though...
+However, `nemo` when opened as first in a DISPLAY, it blocks, and takes over the desktop - so all other `nemo` processes, started afterward, will run under it (so they don't block when run, but exit immediately after their windows are shown) - regardless of their individual DISPLAY setting (and if all the instances are started with `--no-desktop`)! And same goes for newer nemo (nemo 3.2.2) and nautilus! `pcmanfm` can get around this, though... so finally, here `pcmanfm` with separate `gnome-terminal` is used.
 
 As a git GUI client, `giggle` can be easily set to show history, file tree, and open a text file; for other git GUI clients, see https://git-scm.com/downloads/guis/
 
-* This script assumes that python2.7/dist-packages/pyvirtualdisplay/xephyr.py has been modified, so Xephyr is started with `-ac` (to allow X forwarding via ssh, see https://askubuntu.com/q/116936), and `-resizeable` (to allow to resize the window)
+* This script assumes that python2.7/dist-packages/pyvirtualdisplay/xephyr.py has been modified, so Xephyr is started with `-ac` (to allow X forwarding via ssh, see https://askubuntu.com/q/116936), and `-resizeable` (to allow to resize the window) - TODO: please check/apply the patch `pyvirtualdisplay.patch` in this directory
 * This script needs the `toggle-decorations` executable, which should be built from the `toggle-decorations.c` file in this directory (see inside that file, for instructions on how to build with gcc)
 
 Python requirements for this script:
 
 * pyvirtualdisplay - for install, see https://github.com/ponty/PyVirtualDisplay#ubuntu-1404
+    * however, instead of `xserver-xephyr`, which in Ubuntu 14.04 is v. 2:1.15.1, install `xserver-xephyr-lts-xenial`, also available in vanilla repos for Ubuntu 14.04, which is v. 2:1.18.3, and includes support for '"-screen WxH+X+Y" option for window placement' (https://bugs.freedesktop.org/show_bug.cgi?id=12221 ; see also https://lists.freedesktop.org/archives/xorg/2007-September/028666.html)
+
 * pyxhook - sudo pip install pyxhook (there is also keyboard - `sudo pip install keyboard`; unfortunately, it needs `sudo` to run on Linux)
 * pexpect - sudo pip install pexpect
 
@@ -56,6 +58,13 @@ if not os.path.exists(IMGDIR):
   print("Creating dir {}".format(IMGDIR))
   os.makedirs(IMGDIR)
 
+
+# global lists:
+disps = []
+easyprocs = []
+sshconns = []
+
+
 # This function is called every time a key is presssed
 def kbevent(event):
   global running
@@ -66,8 +75,16 @@ def kbevent(event):
   if event.Ascii == 27: # (Escape); was - 32: # (Space)
     running = False
   elif event.Ascii == 83: # (S = shift+s);
-    print("SCREENSHOT!")
+    TakeScreenshots()
 ########## end kbevent
+
+NUMSCREENSHOTS=0
+
+def TakeScreenshots():
+  global NUMSCREENSHOTS
+  NUMSCREENSHOTS += 1
+  print("SCREENSHOT: {:03} !".format(NUMSCREENSHOTS))
+########## end TakeScreenshots
 
 
 # height/width percents
@@ -75,10 +92,6 @@ hp1 = 0.6
 hp2 = 1.0-hp1 # the rest
 wp1 = 0.6
 wp2 = 1.0-wp1 # the rest
-
-disps = []
-easyprocs = []
-sshconns = []
 
 
 if __name__ == "__main__":
@@ -136,16 +149,19 @@ if __name__ == "__main__":
     ssh_cmd.sendline(sshpwd) # don't wait after this for EOF?
     ssh_cmd.expect(pexpect.EOF)
     sshconns.append(ssh_cmd)
+    time.sleep(0.1)
     #
     mycmd='giggle /tmp'
     print("mycmd: {}".format(mycmd))
     gigglecmdproc = EasyProcess(mycmd).start()
     easyprocs.append(gigglecmdproc)
+    time.sleep(0.1)
     #
     mycmd='pcmanfm /tmp'
     print("mycmd: {}".format(mycmd))
     pcmancmdproc = EasyProcess(mycmd).start()
     easyprocs.append(pcmancmdproc)
+    time.sleep(0.1)
     #
     mycmd=['gnome-terminal', '--working-directory=/tmp', '-e', r'bash -c "bash --rcfile <( echo source $HOME/.bashrc ; echo PS1=\\\"user@PC:\\\\[\\\\033[0\;33\;1m\\\\]\\\w\\\[\\\033[00m\\\]\\\\$ \\\" ) -i"']
     print("mycmd: {}".format(mycmd))
@@ -156,8 +172,10 @@ if __name__ == "__main__":
   # "You have to do this between each new Display." https://stackoverflow.com/q/30168169/
   # (else the second window does not instantiate, and the programs for it go in the first window)
   # time.sleep(1)
+  time.sleep(0.2)
   os.environ["DISPLAY"] = origdisplay # now that we mess with stuff, we (might) get segfault here?!
   AddDisplay()
+  time.sleep(0.2)
   os.environ["DISPLAY"] = origdisplay
   AddDisplay()
 
