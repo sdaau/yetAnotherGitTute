@@ -1,4 +1,5 @@
 // from: https://gist.github.com/muktupavels/d03bb14ea6042b779df89b4c87df975d
+// via: https://askubuntu.com/questions/928226/xprop-fails-to-undecorate-window
 /*
  * Copyright (C) 2017 Alberts Muktupāvels
  *

@@ -23,7 +23,8 @@ However, `nemo` when opened as first in a DISPLAY, it blocks, and takes over the
 
 As a git GUI client, `giggle` can be easily set to show history, file tree, and open a text file; for other git GUI clients, see https://git-scm.com/downloads/guis/
 
-* Note: this script assumes that python2.7/dist-packages/pyvirtualdisplay/xephyr.py has been modified, so Xephyr is started with `-ac` (to allow X forwarding via ssh, see https://askubuntu.com/q/116936), and `-resizeable` (to allow to resize the window)
+* This script assumes that python2.7/dist-packages/pyvirtualdisplay/xephyr.py has been modified, so Xephyr is started with `-ac` (to allow X forwarding via ssh, see https://askubuntu.com/q/116936), and `-resizeable` (to allow to resize the window)
+* This script needs the `toggle-decorations` executable, which should be built from the `toggle-decorations.c` file in this directory (see inside that file, for instructions on how to build with gcc)
 
 Python requirements for this script:
 
@@ -37,15 +38,20 @@ from easyprocess import EasyProcess
 #~ from pyvirtualdisplay import Display
 from pyvirtualdisplay.smartdisplay import SmartDisplay
 import time
-import os
+import sys, os
 import pyxhook
 import subprocess
 import pexpect
 import getpass
 import gtk.gdk
 
-import Xlib
-import Xlib.display
+#~ import Xlib
+#~ import Xlib.display
+
+THIS_SCRIPT_DIR = os.path.dirname( os.path.abspath(os.path.realpath(__file__)) )
+# just to make sure, change to this directory:
+os.chdir(THIS_SCRIPT_DIR)
+print("Running from dir: {}".format(os.getcwd()))
 
 # This function is called every time a key is presssed
 def kbevent(event):
@@ -56,6 +62,18 @@ def kbevent(event):
   # If the ascii value matches spacebar, terminate the while loop
   if event.Ascii == 27: # (Escape); was - 32: # (Space)
     running = False
+########## end kbevent
+
+
+# height/width percents
+hp1 = 0.6
+hp2 = 1.0-hp1 # the rest
+wp1 = 0.6
+wp2 = 1.0-wp1 # the rest
+
+disps = []
+easyprocs = []
+sshconns = []
 
 
 if __name__ == "__main__":
@@ -71,7 +89,7 @@ if __name__ == "__main__":
   print("w, h deskhalf {} {}".format(wdeskhalf, hdeskhalf))
   origdisplay = os.environ['DISPLAY'] # expecting :0.0 here
   print("** display is: "+origdisplay + " " + os.environ['MATE_DESKTOP_SESSION_ID'] + " " + os.environ['DESKTOP_SESSION'] + " " + os.environ['XDG_CURRENT_DESKTOP'])
-  os.environ['NEMO_ACTION_VERBOSE'] = "1"
+  #os.environ['NEMO_ACTION_VERBOSE'] = "1"
 
   # to reuse ssh connections; this:
 #  MYSSHCONFFILESTR="""
@@ -102,10 +120,6 @@ if __name__ == "__main__":
   #   ssh_starter.expect(pexpect.EOF)
   # except Exception as e:
   #   print("Got Exception: " + str(e))
-
-  disps = []
-  easyprocs = []
-  sshconns = []
 
   # Create hookmanager # only after the keyboard passwording stuff is done!
   hookman = pyxhook.HookManager()
@@ -163,6 +177,11 @@ if __name__ == "__main__":
     print("mycmd: {}".format(mycmd))
     pcmancmdproc = EasyProcess(mycmd).start()
     easyprocs.append(pcmancmdproc)
+    #
+    mycmd=['gnome-terminal', '--working-directory=/tmp', '-e', r'bash -c "bash --rcfile <( echo source $HOME/.bashrc ; echo PS1=\\\"user@PC:\\\\[\\\\033[0\;33\;1m\\\\]\\\w\\\[\\\033[00m\\\]\\\\$ \\\" ) -i"']
+    print("mycmd: {}".format(mycmd))
+    termcmdproc = EasyProcess(mycmd).start()
+    easyprocs.append(termcmdproc)
     # #
     # time.sleep(1) # wait for window to instantiate, else it is not listed
     # rootw = gtk.gdk.get_default_root_window()
@@ -206,12 +225,12 @@ if __name__ == "__main__":
   AddDisplay()
 
   # instantiate first, then mess with decorations
-  time.sleep(3)
+  time.sleep(1)
   print("---")
   #gtk.gdk.DisplayManager.list_displays() #descriptor 'list_displays' of 'gtk.gdk.DisplayManager' object needs an argument
   gDMo = gtk.gdk.display_manager_get()
-  print("{} {}".format(gDMo, dir(gDMo)))
-  gDMo.list_displays()
+  print(gDMo) #"{} {}".format(gDMo, dir(gDMo)))
+  gDMo.list_displays() # nothing here
   print("---")
   gtk.gdk.window_process_all_updates()
   gtk.gdk.flush() # doesn't do anything here..
@@ -234,15 +253,27 @@ if __name__ == "__main__":
     os.environ["DISPLAY"] = disp[1]
     winlist = EasyProcess('wmctrl -l').call().stdout # prints according to current DISPLAY
     print("winlist: {}".format(winlist))
+    # first, try remove the decoration/titlebar from all windows
+    for line in iter(winlist.splitlines()):
+      hexidstr = line.split()[0] # split() no args, split on whitespace
+      hexid = int(hexidstr, 0) # "You must specify 0 as the base in order to invoke this prefix-guessing behavior"
+      print("hex: {} {}".format(hexidstr, hexid))
+      EasyProcess('./toggle-decorations '+hexidstr).call()
     # to call with hex id, use wmctrl -i -r 0x00...
-    # Giggle is not maximised, so we can manipulate it immediately:
-    EasyProcess(['wmctrl', '-r', 'Giggle', '-e', '0,0,'+str(hdeskhalf/2)+','+str(wdeskhalf)+','+str(hdeskhalf/2)]).call()
-    # the nemo, however, is maximized, so we have to unmaximize it first
-    #~ EasyProcess('wmctrl -r tmp -b remove,maximized_horz').call()
-    #~ EasyProcess('wmctrl -r tmp -b remove,maximized_vert').call()
-    #~ EasyProcess('wmctrl -r tmp -e 0,0,0,'+str(wdeskhalf)+','+str(hdeskhalf/2)).call()
+    # the nemo is/may be maximized, so we have to unmaximize it first
+    EasyProcess('wmctrl -r tmp -b remove,maximized_horz').call()
+    EasyProcess('wmctrl -r tmp -b remove,maximized_vert').call()
+    EasyProcess( 'wmctrl -r tmp -e 0,0,0,{},{}'.format(int(wdeskhalf*wp1), int(hdeskhalf*hp1)) ).call()
+    # Giggle/Terminal is not maximised, so we can manipulate it immediately:
+    EasyProcess([ 'wmctrl', '-r', 'Terminal', '-e', '0,0,{},{},{}'.format(int(hdeskhalf*hp1), int(wdeskhalf*wp1), int(hdeskhalf*hp2)) ]).call()
+    # Note: the calc is correct, but in this setup, giggle will not scale down in width
+    #  below its own minimal width, so it will be wider than wdeskhalf*wp2;
+    #  then even if pushed correctly to wdeskhalf*wp1, it will stick with right edge to right edge of screen,
+    #  so it will look not exactly aligned, and would have to be moved manually
+    #  (Alt+LeftClick works, when Xephyr window 'grabs mouse and keyboard')
+    EasyProcess([ 'wmctrl', '-r', 'Giggle', '-e', '0,{},0,{},{}'.format(int(wdeskhalf*wp1), int(wdeskhalf*wp2), hdeskhalf) ]).call()
 
-  display = Xlib.display.Display()
+  #~ display = Xlib.display.Display()
 
   # Create a loop to keep the application running (for detecting keypresses
   running = True
