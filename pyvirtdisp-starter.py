@@ -15,7 +15,7 @@ Then you can navigate manually to the right locations in these windows.
 
 The Xephyr window should start with quarter size of the available desktop (queried via `xprop -root _NET_WORKAREA`).
 
-When the windows are instantiated, you should be able to use Ctrl+Alt+Space to take a screenshot of all the windows, which will be numbered (numbers are reset at each run of the application), which will be stored in the `img/` subfolder of this directory (will be created if it does not exist).
+When the windows are instantiated, you should be able to use Ctrl+Alt+Space to take a screenshot of all the windows, which will be numbered (numbers are reset at each run of the application), which will be stored in the `imgscrshot/` subfolder of this directory (will be created if it does not exist).
 
 Tested on Ubuntu 14.04, MATE desktop.
 
@@ -32,6 +32,7 @@ Requirements/dependencies for this script:
 * This script assumes that python2.7/dist-packages/pyvirtualdisplay/xephyr.py has been modified, so Xephyr is started with `-ac` (to allow X forwarding via ssh, see https://askubuntu.com/q/116936), and `-resizeable` (to allow to resize the window), and with hacks for position available on newer Xephyr - please check/apply the patch file `pyvirtualdisplay.patch`, available in this directory
 * This script needs the `toggle-decorations` executable, which should be built from the `toggle-decorations.c` file in this directory (see inside that file, for instructions on how to build with gcc)
 * This script runs `ssh` to do X11 forwarding, so `sudo apt-get install openssh-client` is a dependency
+* This script uses `gnome-screenshot` to get screenshots
 
 Python requirements for this script:
 
@@ -66,10 +67,11 @@ THIS_SCRIPT_DIR = os.path.dirname( os.path.abspath(os.path.realpath(__file__)) )
 os.chdir(THIS_SCRIPT_DIR)
 print("Running from dir: {}".format(os.getcwd()))
 
-IMGDIR=os.path.join(THIS_SCRIPT_DIR, "img")
-if not os.path.exists(IMGDIR):
-  print("Creating dir {}".format(IMGDIR))
-  os.makedirs(IMGDIR)
+IMGDIR="imgscrshot"
+IMGDIRFULL=os.path.join(THIS_SCRIPT_DIR, IMGDIR)
+if not os.path.exists(IMGDIRFULL):
+  print("Creating dir {}".format(IMGDIRFULL))
+  os.makedirs(IMGDIRFULL)
 
 
 # global lists:
@@ -104,9 +106,27 @@ def kbeventKeyDown(event):
 NUMSCREENSHOTS=0
 
 def TakeScreenshots():
-  global NUMSCREENSHOTS
+  global NUMSCREENSHOTS, disps
   NUMSCREENSHOTS += 1
-  print("SCREENSHOT: {:03} !".format(NUMSCREENSHOTS))
+  scrshbasename = "scrshot_{:03}".format(NUMSCREENSHOTS)
+  rep = []
+  for ix, disptup in enumerate(disps):
+    scrshname = os.path.join( IMGDIR, "{}_{}.png".format(scrshbasename, (ix+1)) )
+    # disp = disptup[0] # get the SmartDisplay
+    # # unfortunately, disp.waitgrab grabs screenshot of entire desktop, instead of what's inside; and after first screenshot, getting `Fatal IO error 11 ... on X server :0.0`, and process breaks...
+    # #os.environ["DISPLAY"] = disptup[1] # no dice, still IO error
+    # #disp.redirect_display(on=False) # True -> set $DISPLAY to virtual screen (False -> set $DISPLAY to original screen, i.e. unset DISPLAY), in abstractdisplay.py # no dice, still IO error
+    # os.environ["DISPLAY"] = ":0.0" # no dice, still IO error
+    # time.sleep(0.1)
+    # img = disp.waitgrab()
+    # img.save(scrshname,"PNG")
+    ####
+    # the above does not work, but `gnome-screenshot` can take screenshots from a different display, so use that..
+    schcmd = "gnome-screenshot --display={} -f {}".format(disptup[1], scrshname)
+    EasyProcess(schcmd).call()
+    rep.append(scrshname)
+    time.sleep(0.1)
+  print("SCREENSHOT: {} !".format(" ".join(rep)))
 ########## end TakeScreenshots
 
 

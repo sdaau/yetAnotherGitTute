@@ -73,3 +73,23 @@ diff -Naur '--exclude=*.pyc' /tmp/old/PyVirtualDisplay-0.2.1/pyvirtualdisplay/xe
                 self.new_display_var,
                 ]
          return cmd
+diff -Naur '--exclude=*.pyc' /tmp/old/PyVirtualDisplay-0.2.1/pyvirtualdisplay/xvfb.py /usr/local/lib/python2.7/dist-packages/pyvirtualdisplay/xvfb.py
+--- /tmp/old/PyVirtualDisplay-0.2.1/pyvirtualdisplay/xvfb.py	2016-03-04 06:52:36.000000000 +0100
++++ /usr/local/lib/python2.7/dist-packages/pyvirtualdisplay/xvfb.py	2017-12-20 21:47:06.128568369 +0100
+@@ -17,7 +17,7 @@
+     hardware and no physical input devices. It emulates a dumb
+     framebuffer using virtual memory.
+     '''
+-    def __init__(self, size=(1024, 768), color_depth=24, bgcolor='black', fbdir=None):
++    def __init__(self, size=(1024, 768), color_depth=24, bgcolor='black', fbdir=None, position=None):
+         '''
+         :param bgcolor: 'black' or 'white'
+         :param fbdir: If non-null, the virtual screen is memory-mapped
+@@ -30,6 +30,7 @@
+         self.bgcolor = bgcolor
+         self.display = None
+         self.fbdir = fbdir
++        # just ignore position here, is not needed
+         AbstractDisplay.__init__(self)
+ 
+     @classmethod
