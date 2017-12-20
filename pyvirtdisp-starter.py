@@ -45,8 +45,6 @@ import pexpect
 import getpass
 import gtk.gdk
 
-#~ import Xlib
-#~ import Xlib.display
 
 THIS_SCRIPT_DIR = os.path.dirname( os.path.abspath(os.path.realpath(__file__)) )
 # just to make sure, change to this directory:
@@ -91,35 +89,12 @@ if __name__ == "__main__":
   print("** display is: "+origdisplay + " " + os.environ['MATE_DESKTOP_SESSION_ID'] + " " + os.environ['DESKTOP_SESSION'] + " " + os.environ['XDG_CURRENT_DESKTOP'])
   #os.environ['NEMO_ACTION_VERBOSE'] = "1"
 
-  # to reuse ssh connections; this:
-#  MYSSHCONFFILESTR="""
-#host *
-#    controlmaster auto
-#    controlpath /tmp/ssh-%r@%h:%p
-#"""
-#  with open("ssh.config", "w") as text_file:
-#    text_file.write(MYSSHCONFFILESTR)
-  # ... unfortunately, if we reuse, then we cannot control the DISPLAY of the X11 forwarding, which need to be separate; so instead of reusing connection via ssh.config, just feed the password we'll obtain (sshpwd below)
-  # pxssh can't really be set to use this config file;
+  # ... unfortunately, if we reuse ssh connection, then we cannot control the DISPLAY of the X11 forwarding, which need to be separate; so instead of reusing connection via ssh.config, just feed the password we'll obtain (sshpwd below)
+  # pxssh can't really be set to use a config file;
   # try make an ssh connection with pexpect (check pexpect examples/ssh_tunnel.py)
   curuser = getpass.getuser()
   print("For the ssh connection to this machine as current user: {}@localhost".format(curuser))
   sshpwd = getpass.getpass('Enter password: ')
-
-  # even if this does run, if we reuse connections, then we don't have the right DISPLAY
-  # starter_ssh_cmd = "ssh -F ssh.config -XC -c blowfish {}@localhost".format(curuser)
-  # try:
-  #   ssh_starter = pexpect.spawn(starter_ssh_cmd)
-  #   ssh_starter.expect('password: ')
-  #   print('(sleeping a bit after expecting password: ...)')
-  #   time.sleep(0.1)
-  #   ssh_starter.sendline(sshpwd)
-  #   print('(after sendline  ...)')
-  #   #time.sleep(60) # Cygwin is slow to update process status.
-  #   time.sleep(5) # also on linux, tends to wait here a lot more than the timeout
-  #   ssh_starter.expect(pexpect.EOF)
-  # except Exception as e:
-  #   print("Got Exception: " + str(e))
 
   # Create hookmanager # only after the keyboard passwording stuff is done!
   hookman = pyxhook.HookManager()
@@ -139,10 +114,6 @@ if __name__ == "__main__":
     #mycmd='bash -c "echo AAA >> /tmp/test.log"' # shell redir has to be called like this!
     #
     # unfortunately, we cannot just call `nemo` here like the usual:
-    #~ mycmd='nemo --no-desktop --display='+os.environ['DISPLAY']+' /tmp'
-    #~ print("mycmd: {}".format(mycmd))
-    #~ nemocmdproc = EasyProcess(mycmd).start()
-    #~ easyprocs.append(nemocmdproc)
     # - it will take over the first Xephyr window as desktop manager, and all subsequent `nemo`s will open there;
     # however, we can use SSH X11 forwarding, which seems to fix that:
     # however, we must have mate-session (or gnome-session) ran before that;
@@ -164,15 +135,6 @@ if __name__ == "__main__":
     gigglecmdproc = EasyProcess(mycmd).start()
     easyprocs.append(gigglecmdproc)
     #
-    #~ mycmd='ssh -XfC -c blowfish {}@localhost nemo /tmp'.format(curuser) #  -F ssh.config #  --no-desktop seems to have no effect here...
-    #~ print("mycmd: {}".format(mycmd))
-    #~ ssh_cmd2 = pexpect.spawn(mycmd)
-    #~ ssh_cmd2.expect('password: ')
-    #~ time.sleep(0.1)
-    #~ ssh_cmd2.sendline(sshpwd) # don't wait after this for EOF?
-    #~ ssh_cmd2.expect(pexpect.EOF)
-    #~ sshconns.append(ssh_cmd2)
-    #
     mycmd='pcmanfm /tmp'
     print("mycmd: {}".format(mycmd))
     pcmancmdproc = EasyProcess(mycmd).start()
@@ -182,55 +144,18 @@ if __name__ == "__main__":
     print("mycmd: {}".format(mycmd))
     termcmdproc = EasyProcess(mycmd).start()
     easyprocs.append(termcmdproc)
-    # #
-    # time.sleep(1) # wait for window to instantiate, else it is not listed
-    # rootw = gtk.gdk.get_default_root_window()
-    # # this lists only for DISPLAY=:0:
-    # ## for id in rootw.property_get('_NET_CLIENT_LIST')[2]:
-    # ##   w = gtk.gdk.window_foreign_new(id)
-    # ##   if w:
-    # ##     print("{} {}".format(id, w.property_get('WM_NAME')[2]))
-    # wcurrootdat = rootw.property_get("_NET_ACTIVE_WINDOW") # ('WINDOW', 32, [102760449]) - refers to 0x06200001 Xephyr on :1005.0 etc window ; 102760449 = 0x6200001
-    # wcurrootid = wcurrootdat[2][0]
-    # wr = gtk.gdk.window_foreign_new( wcurrootid )
-    # # w.set_decorations here changes the titlebar od the Xephyr window!
-    # thisdisp = gtk.gdk.Display(os.environ['DISPLAY'])
-    # print("wr {} {} // {} d {}".format(wcurrootdat, wr.get_decorations(), wr.get_children(), thisdisp )) # <flags 0 of type GdkWMDecoration> // [] empty here even w/ wait; at next toggle, flags GDK_DECOR_ALL
-    # winlist = EasyProcess('wmctrl -l').call().stdout # prints according to current DISPLAY
-    # print("winlist: {}".format(winlist))
-    # dispscr = thisdisp.get_default_screen()
-    # disprootw = dispscr.get_root_window()
-    # # ok, listing the right children under current DISPLAY with this:
-    # for id in disprootw.property_get('_NET_CLIENT_LIST')[2]:
-    #   w = gtk.gdk.window_foreign_new_for_display(thisdisp, id)
-    #   if w:
-    #     print("d {} {} {}".format(id, w.property_get('WM_NAME')[2], w.get_decorations()))
-    # # for line in iter(winlist.splitlines()):
-    # #   hexidstr = line.split()[0] # split() no args, split on whitespace
-    # #   hexid = int(hexidstr, 0) # "You must specify 0 as the base in order to invoke this prefix-guessing behavior"
-    # #   print("hex: {} {}".format(hexidstr, hexid))
-    # #   #~ w = gtk.gdk.window_foreign_new( hexid ) # cannot use this here, only for default DISPLAY
-    # #   w = gtk.gdk.window_foreign_new_for_display( thisdisp, hexid ) # this sorta works? but getting segfault later?
-    # #   print("w {} {}".format(w, w.get_decorations())) # <flags GDK_DECOR_ALL of type GdkWMDecoration>
-    # #   w.set_decorations( (w.get_decorations()+1)%2 ) # toggle between 0 and 1
-    # #   print("w {} {}".format(w, w.get_decorations())) #
-    # #~ gtk.gdk.window_process_all_updates() # this causes segfault ?!
-    # #~ gtk.gdk.flush() # this may actually effectuate no title bars, because at start, all of them show undecorated!
 
   AddDisplay()
   # "You have to do this between each new Display." https://stackoverflow.com/q/30168169/
   # (else the second window does not instantiate, and the programs for it go in the first window)
   # time.sleep(1)
-  os.environ["DISPLAY"] = origdisplay # now that we mess with stuff, we get segfault here?!
+  os.environ["DISPLAY"] = origdisplay # now that we mess with stuff, we (might) get segfault here?!
+  AddDisplay()
+  os.environ["DISPLAY"] = origdisplay
   AddDisplay()
 
   # instantiate first, then mess with decorations
   time.sleep(1)
-  print("---")
-  #gtk.gdk.DisplayManager.list_displays() #descriptor 'list_displays' of 'gtk.gdk.DisplayManager' object needs an argument
-  gDMo = gtk.gdk.display_manager_get()
-  print(gDMo) #"{} {}".format(gDMo, dir(gDMo)))
-  gDMo.list_displays() # nothing here
   print("---")
   gtk.gdk.window_process_all_updates()
   gtk.gdk.flush() # doesn't do anything here..
@@ -239,15 +164,6 @@ if __name__ == "__main__":
     thisdisp = gtk.gdk.Display(disp[1])
     dispscr = thisdisp.get_default_screen()
     print("d {} {} {} {} {}".format(disp[1], thisdisp, thisdisp.get_n_screens(), dispscr, dispscr.get_n_monitors()))
-    # disprootw = dispscr.get_root_window() # here segfault, assertion 'GDK_IS_SCREEN (screen)' failed - but only on second loop!
-  #   # # ok, listing the right children under current DISPLAY with this:
-  #   # for id in disprootw.property_get('_NET_CLIENT_LIST')[2]:
-  #   for w in dispscr.get_toplevel_windows():
-  #    # w = gtk.gdk.window_foreign_new_for_display(thisdisp, id)
-  #     if w:
-  #       id = w.xid # exists, but is the same for different displays ?! and WM_NAME is wrong, too!
-  #       print("  {} {} {} {}".format(disp[1], id, w.property_get('WM_NAME')[2], w.get_decorations()))
-  #   time.sleep(1)
 
   for disp in disps:
     os.environ["DISPLAY"] = disp[1]
@@ -273,8 +189,6 @@ if __name__ == "__main__":
     #  (Alt+LeftClick works, when Xephyr window 'grabs mouse and keyboard')
     EasyProcess([ 'wmctrl', '-r', 'Giggle', '-e', '0,{},0,{},{}'.format(int(wdeskhalf*wp1), int(wdeskhalf*wp2), hdeskhalf) ]).call()
 
-  #~ display = Xlib.display.Display()
-
   # Create a loop to keep the application running (for detecting keypresses
   running = True
   while running:
@@ -285,93 +199,7 @@ if __name__ == "__main__":
   for easyproc in easyprocs: easyproc.stop()
   for disp in disps: disp[0].stop()
   # also:
-  #~ ssh_starter.close(force=True)
   for sshcmd in sshconns: sshcmd.close(force=True)
   # Close the listener when we are done
   hookman.cancel()
-
-
-"""
-  #~ Display(visible=1, size=(320, 240)).start()
-  #EasyProcess('startx').start()
-  #EasyProcess('gnome-calculator').start()
-  #~ time.sleep(2)
-  #~ mycmd='caja --display='+thisdisplay+' --no-desktop /tmp'
-  #~ mycmd='marco'
-  #~ mycmd='marco --display='+thisdisplay+'.0'
-  #~ print(mycmd)
-  #~ EasyProcess(mycmd).start()
-  #~ mycmd='caja --display='+thisdisplay+'.0 --no-desktop /tmp'
-  #~ mycmd='pcmanfm /tmp'
-
-    #~ mycmd='gnome-session'
-    #~ print("mycmd: {}".format(mycmd))
-    #~ gsesscmdproc = EasyProcess(mycmd).start()
-    #~ easyprocs.append(gsesscmdproc)
-
-    #~ mycmd='gnome-terminal'
-    #~ print("mycmd: {}".format(mycmd))
-    #~ termcmdproc = EasyProcess(mycmd).start()
-    #~ easyprocs.append(termcmdproc)
-
-"""
-
-
-"""
-from easyprocess import EasyProcess
-from pyvirtualdisplay import Display
-#~ from pyvirtualdisplay.smartdisplay import SmartDisplay # needs pyscreenshot
-import logging
-logging.basicConfig(level=logging.DEBUG)
-import time
-
-_W = 600
-_H = 500
-# height percents
-hp1 = 0.6
-hp2 = 1-hp1 # the rest
-
-
-Display(visible=1, size=(_W , _H)).start()
-
-# EasyProcess.start() # spawns process in background
-# EasyProcess.check() # loops process in foreground
-
-
-try:
-  EasyProcess('awesome -c rc.lua').start()
-except Exception, detail:
-  print  detail
-
-time.sleep(2)
-
-try:
-  EasyProcess('bash -c "cd $HOME && scite"').start()
-except Exception, detail:
-  print  detail
-
-time.sleep(2)
-
-try:
-  # 0,x,y,w,h
-  EasyProcess(['wmctrl', '-r', 'SciTE', '-e', '0,0,0,'+str(_W)+','+str(int(_H*hp1))]).start()
-except Exception, detail:
-  print  detail
-
-# gnome-terminal -e 'bash -c "bash --rcfile <(echo source $HOME/.bashrc ; echo PS1=\\\"\$ \\\") -i"'
-# first `bash` needed, otherwise cannot do process substitution as file
-
-try:
-  EasyProcess(['gnome-terminal', '-e', 'bash -c "bash --rcfile <(echo source $HOME/.bashrc ; echo PS1=\\\"\$\ \\\") -i"']).start() # --maximize is Gnome, nowork
-except Exception, detail:
-  print  detail
-
-time.sleep(0.5)
-
-try:
-  # 0,x,y,w,h
-  EasyProcess(['wmctrl', '-r', 'Terminal', '-e', '0,0,'+str(int(_H*hp1))+','+str(_W)+','+str(int(_H*hp2))]).start()
-except Exception, detail:
-  print  detail
-"""
 
