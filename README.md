@@ -22,7 +22,74 @@ This tutorial has been tested on git version 1.9.1 on Ubuntu 14.04, a GNU/Linux 
 
 -----
 
-This tutorial will operate in the temporary `/tmp` directory of the filesystem; and will be illustrated by screenshots, taken on Ubuntu 14.04 (see the [pyvirtdisp-starter.py](pyvirtdisp-starter.py) in this repo) - where each related `git` directory will have its own terminal (here, `gnome-terminal`), own file manager (here, `pcmanfm`), and own Git GUI client (here, `giggle`; for more, see [Git - GUI Clients](https://git-scm.com/downloads/guis)).
+This tutorial will operate in the temporary `/tmp` directory of the filesystem; and will be illustrated by screenshots, taken on Ubuntu 14.04 (see the Python script [`pyvirtdisp-starter.py`](pyvirtdisp-starter.py) in this repo for more) - where each related `git` directory will have its own terminal (here, `gnome-terminal`), own file manager (here, `pcmanfm`), and own Git GUI client (here, `giggle`; for more, see [Git - GUI Clients](https://git-scm.com/downloads/guis)).
 
 The tutorial will start with creating a "main" `git` project directory, which will simulate online repositories, such as those found on GitHub or other services. Then, it will illustrate how two users, [Alice and Bob](https://en.wikipedia.org/wiki/Alice_and_Bob), work in their respective copies of the "main" repositories, and update (or synchronize) the "main" repository with their own changes.
+
+-----
+
+## The "main" repository - initializing
+
+First, fire up a terminal, and let's create a directory under `/tmp` called `main` - type (or copy/paste) the following line at the terminal prompt (usually ending with dollar sign `$`), and press ENTER (Note that `mkdir` is a `bash` command):
+
+    mkdir /tmp/main
+
+scrshot_001.png
+
+We should be presented with no other messages, and another prompt - meaning the operation succeeded:
+
+scrshot_002.png
+
+We can now switch to this newly created directory in the terminal, by executing the `bash` command for "change directory", `cd`:
+
+    cd /tmp/main
+
+We should be presented with no other messages, just another prompt (although the prompt might indicate the new current directory):
+
+scrshot_003
+
+Now, let's create a new directory for what will become the "main" `git` repository - let's call it `TheProject.git`. We could run `mkdir /tmp/main/TheProject.git` (that is, by specifying an [absolute path](https://en.wikipedia.org/wiki/Path_(computing)#Absolute_and_relative_paths)) - however, now that we're already in `/tmp/main` as our current working directory, we might as well just run:
+
+    mkdir TheProject.git
+
+scrshot_004
+
+... and then we can change to `TheProject.git` with:
+
+    cd TheProject.git
+
+scrshot_005
+
+Now that we're in the `/tmp/main/TheProject.git` directory, which is otherwise empty, we can finally initialize it as a `git` repository, by running the command `git init`:
+
+    git init
+
+scrshot_006
+
+Note that we get a response to this command in the terminal this time:
+
+    Initialized empty Git repository in /tmp/main/TheProject.git/.git/
+
+However, note also, that our file manager still shows the `TheProject.git` folder as empty - but if we turn on showing of hidden files (on Windows, see [Show hidden files](https://support.microsoft.com/en-us/help/14201/windows-show-hidden-files); on macOS, use [CMD-Shift-. (dot)](https://www.macworld.co.uk/how-to/mac-software/how-show-hidden-files-library-folder-mac-3520878/); on Ubuntu GNU/Linux, Ctrl-H), we'll see something else:
+
+scrshot_007
+
+There is now a `.git` subfolder in the `TheProject.git` folder - hidden by default on Unix filesystems, since its name starts with a `.` (dot). It contains different subfolders, such as `branches`, `hooks`, `objects`, `refs` etc. - we won't go into details, but it is here that the commit history of the project will be saved.
+
+However, in typical working use, we usually do not need to concern ourselves with the details of the contents in the `.git` subfolder - which is why it is by default named in such a way to be hidden, so it "gets out of the way". In the terminal, we can confirm the same by calling the Unix listing command, `ls`:
+
+scrshot_008
+
+Note that the first time we call `ls`, we simply get nothing listed (we get the prompt back again); however if we call `ls -la`, which lists hidden files, we do get the `.git` subfolder listed:
+
+    user@PC:/tmp/main/TheProject.git$ ls
+    user@PC:/tmp/main/TheProject.git$ ls -la
+    total 12
+    drwxrwxr-x 3 user user 4096 Dec 21 03:21 .
+    drwxrwxr-x 3 user user 4096 Dec 21 03:07 ..
+    drwxrwxr-x 7 user user 4096 Dec 21 03:21 .git
+
+Now that we're aware of this, we can go back to hiding/ignoring the `.git` subfolder for the rest of the tutorial. We're now ready to add our first commit to this repository.
+
+
 
