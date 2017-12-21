@@ -89,7 +89,10 @@ def kbeventKeyDown(event):
 
   # If the ascii value matches spacebar, terminate the while loop
   if event.Ascii == 27: # (Escape); was - 32: # (Space)
-    running = False
+    if ISCTRL and ISALT: # so, react on Ctrl-Alt-Escape:
+      ISCTRL=False
+      ISALT=False
+      running = False
   elif event.Ascii == 227 or event.Ascii == 228: # (Control_L, Control_R);
     ISCTRL = True
   elif event.Ascii == 233 or event.Ascii == 234: # (Alt_L, Alt_R);
