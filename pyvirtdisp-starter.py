@@ -48,7 +48,7 @@ Note: some windows may fail to instantiate, if you have them hanging in the proc
   32084 pts/2    Sl     0:01 pcmanfm /tmp  # "hanging" process
 ... in which case they should be manually removed, e.g. `kill -9 32084`
 
-Note: with this approach, it is not possible to copy/paste, sometimes even between applications in the same Xephyr window (you may want to start `glipper` in each Xephyr window, which will then allow for copy/paste in the same Xephyr window, but not between the Xephyr window and the desktop). To exchange message between terminals in Xephyr and the desktop, you can run `w` to get a list of terminals, and then `echo "My Message" > /dev/pts/12` to a specific terminal, or `echo "My Message" | sudo wall -n` to all terminals.
+Note: with this approach, it is not possible to copy/paste, sometimes even between applications in the same Xephyr window (you may want to start `glipper` in each Xephyr window, which will then allow for copy/paste in the same Xephyr window, but not between the Xephyr window and the desktop). To exchange message between terminals in Xephyr and the desktop, you can run `w` to get a list of terminals, and then `echo "My Message" > /dev/pts/12` to a specific terminal, or `echo "My Message" | sudo wall -n` to all terminals. Alternately, from the main desktop you can run `DISPLAY=:1001.0 gnome-terminal` and open another terminal in a given Xephyr window, and then exchange data through that (via `cat` or `nano`).
 
 """
 
