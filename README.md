@@ -369,3 +369,93 @@ At this point, note that: what the file manager displays, hasn't really changed;
 Note that in `git log --oneline`, we get shortened/truncated SHA-1 hashes as labels for the commits. All seems good so far - we can now proceed to examine, how would other users work with this repository.
 
 
+-----
+
+## Alice and Bob start - cloning and remotes
+
+Now, let's assume Alice and Bob want to work on the previously created repository. First of all, let us create separate folders for them, again under `/tmp`:
+
+    mkdir /tmp/A
+    mkdir /tmp/B
+
+Of course, here it's just a matter of convenience for the tutorial, that all three folders (`main/`, `A/` and `B/`) are under the same parent `/tmp`. In general, these folders could be at completely different locations in the filesystem; or, if the "main" repo is online, they could all be on different computers.
+
+In any case, each user (Alice or Bob), will first `cd` to their own directory, and then perform a `git` operation known as cloning, to retrieve a copy of the "main" repository for themselves - and then they're going to "sign" those copies (via `user.name` and `user.email` config options) respectively (since without identification, `git` won't let them commit, as we saw earlier).
+
+So, Alice could do:
+
+    user@PC:/tmp$ cd /tmp/A
+    user@PC:/tmp/A$ git clone /tmp/main/TheProject.git
+    Cloning into 'TheProject'...
+    done.
+    user@PC:/tmp/A$ cd TheProject
+    user@PC:/tmp/A/TheProject$ git config user.name alice
+    user@PC:/tmp/A/TheProject$ git config user.email alice@example.com
+
+
+Note that here, `git` automatically deduced from the original repo folder name, `TheProject.git`, that the locally cloned copy should be called `TheProject` (without the `.git` extension).
+
+Likewise, Bob could do:
+
+    user@PC:/tmp$ cd /tmp/B
+    user@PC:/tmp/B$ git clone /tmp/main/TheProject.git TheProject_git
+    Cloning into 'TheProject_git'...
+    done.
+    user@PC:/tmp/B$ cd TheProject_git
+    user@PC:/tmp/B/TheProject_git$ git config user.name bob
+    user@PC:/tmp/B/TheProject_git$ git config user.email bob@example.com
+
+Note that here, Bob explicitly specified to `git` the local repo folder name that the repository should be cloned into (that is, `TheProject_git`), by adding it after the main repo URL/path. In other words - you can, in principle, name the folder containing your local copy of a `git` project anything you want.
+
+r2/scrshot_011
+
+At this point, note that:
+
+* After being cloned, both Bob's and Alice's local copies can be opened in the Git GUI client, - and each clone shows the same state, as the one shown for the "main" repo
+* The clone operation did not copy untracked files in the "main" repo (actually, it copies the history commits, and then rebuilds the tracked files accordingly)
+
+We should mention here also the concept of remotes. First, note that now both Alice and Bob can run `git config -l` in their respective repo directories, and obtain a list of all configuration options related to their repos - among others, their `user.` settings; and options related to remotes. For instance, Alice might run:
+
+    user@PC:/tmp/A/TheProject$ git config -l
+    ...
+    remote.origin.url=/tmp/main/TheProject.git
+    remote.origin.fetch=+refs/heads/*:refs/remotes/origin/*
+    branch.master.remote=origin
+    branch.master.merge=refs/heads/master
+    user.name=alice
+    user.email=alice@example.com
+    user@PC:/tmp/A/TheProject$ git remote -v
+    origin	/tmp/main/TheProject.git (fetch)
+    origin	/tmp/main/TheProject.git (push)
+
+The term "remotes" usually refers to remote servers, hosting (remote) `git` repositories. Here, both the `git config -l` and `git remote -v` commands, tell us that we have one "remote", with the name `origin`, pointing at the URL `/tmp/main/TheProject.git` - the path of the "main" repo - in Alice's local clone of the repo. At this point, Bob would obtain identical output (except for the differing `user.` settings).
+
+Note that:
+
+* `git` repositories can, in principle, have more than one remote - but that will be skipped in this tutorial
+* For local filesystem clones on Linux, we were able to use just the absolute path `/tmp/main/TheProject.git` of the "main" repo as a URL - should this fail, we can prefix `file://` to the absolute path, in which case the terminal output during cloning will be slightly different (and more similar to what you'd see if you cloned from an online repository, hosted say on GitHub):
+
+    $ git clone file:///tmp/main/TheProject.git
+    Cloning into 'TheProject'...
+    remote: Counting objects: 6, done.
+    remote: Compressing objects: 100% (2/2), done.
+    Receiving objects: 100% (6/6), done.
+    remote: Total 6 (delta 0), reused 0 (delta 0)
+    Checking connectivity... done.
+
+* Remote URLs are correspondingly prefixed when we clone online repositories over the network, the most common protocols being `https://`, `ssh://` and `git://`
+
+Finally, if we check the status and history log of the locally cloned copies, we'll see that we have the same commits as in the "main" repo - and that we're in branch `master`, like the "main" repo is; say, for Bob's case (Alice would get identical results):
+
+    user@PC:/tmp/B/TheProject_git$ git log --oneline
+    f183325 here is the second commit
+    e9fe842 this is my initial commit
+    user@PC:/tmp/B/TheProject_git$ git status
+    On branch master
+    Your branch is up-to-date with 'origin/master'.
+
+    nothing to commit, working directory clean
+
+From this point on, Alice and Bob can make changes in ther locally cloned repos, and commit changes to them - and their local changes can be synchronized back with the "main" repo through a `git` operation known as pushing.
+
+
