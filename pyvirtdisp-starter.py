@@ -102,6 +102,13 @@ def kbeventKeyDown(event):
       ISCTRL=False
       ISALT=False
 ########## end kbeventKeyDown
+def kbeventKeyUp(event):
+  global ISCTRL, ISALT
+  if event.Ascii == 227 or event.Ascii == 228: # (Control_L, Control_R);
+    ISCTRL = False
+  elif event.Ascii == 233 or event.Ascii == 234: # (Alt_L, Alt_R);
+    ISALT = False
+########## end kbeventKeyUp
 
 NUMSCREENSHOTS=0
 
@@ -163,6 +170,7 @@ if __name__ == "__main__":
   hookman = pyxhook.HookManager()
   # Define our callback to fire when a key is pressed down
   hookman.KeyDown = kbeventKeyDown
+  hookman.KeyUp = kbeventKeyUp
   # Hook the keyboard
   hookman.HookKeyboard()
   # Start our listener
