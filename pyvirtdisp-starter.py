@@ -48,6 +48,8 @@ Note: some windows may fail to instantiate, if you have them hanging in the proc
   32084 pts/2    Sl     0:01 pcmanfm /tmp  # "hanging" process
 ... in which case they should be manually removed, e.g. `kill -9 32084`
 
+Note: with this approach, it is not possible to copy/paste, even between applications in the same Xephyr window (you may want to start `glipper` in each Xephyr window, which will then allow for copy/paste in the same Xephyr window, but not between the Xephyr window and the desktop)
+
 """
 
 from easyprocess import EasyProcess
