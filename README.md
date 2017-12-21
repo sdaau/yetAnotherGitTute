@@ -89,7 +89,7 @@ Note that the first time we call `ls`, we simply get nothing listed (we get the 
     drwxrwxr-x 3 user user 4096 Dec 21 03:07 ..
     drwxrwxr-x 7 user user 4096 Dec 21 03:21 .git
 
-Now that we're aware of this, we can go back to hiding/ignoring the `.git` subfolder for the rest of the tutorial. We're now ready to add our first commit to this repository.
+Now that we're aware of this, we can go back to hiding/ignoring the `.git` subfolder for the rest of the tutorial. The rest of the files in the project folder, that are normally visible, are known as "work tree" or "working directory". We're now ready to add our first commit to this repository.
 
 * Note: the naming convention, of naming a `git` repository folder with the extension `[FOLDERNAME].git`, is specific to a so-called "bare" `git` repository, intended for [hosting on a server](https://git-scm.com/book/en/v2/Git-on-the-Server-Getting-Git-on-a-Server). A bare repository typically does not contain a working directory, it simply contains all the files that we see inside the `.git` subfolder; here however, we use that naming convention with a non-bare repository, simply to emulate the server context.
 
@@ -302,7 +302,7 @@ The status now becomes:
 
 Note that at this point, the Git GUI client (after refresh), will not show the small `+` at the `README.md` icon anymore.
 
-We're now ready to commit - but before we do so, let's note something: to record our changes, first we do `git add`, and only after that, can we do `git commit`; one may wonder, why do we need two commands for a single action of recording to history? The short answer is - because we might change our mind, and decide anyway not to include some changes in the commit. To facilitate this, `git` introduces the concept of a "staging area"; in brief:
+We're now ready to commit - but before we do so, let's note something: to record our changes, first we do `git add`, and only after that, can we do `git commit`; one may wonder, why do we need two commands for a single action of recording to history? The short answer is - because we might change our mind, and decide anyway not to include some changes in the commit. To facilitate this, `git` introduces the concept of a "staging area" a.k.a ["index"](https://stackoverflow.com/questions/12138207/is-the-git-staging-area-just-an-index); in brief:
 
 * There is content/changes in untracked files, and unstaged content/changes in tracked files - these are changes that `git` doesn't *really* "know" about, *yet* (i.e. unstaged changes)
 * There is the *staging area* - content/changes in tracked files that `git` "knows about", but are not *yet* part of history (i.e. staged changes)
@@ -456,6 +456,107 @@ Finally, if we check the status and history log of the locally cloned copies, we
 
     nothing to commit, working directory clean
 
-From this point on, Alice and Bob can make changes in ther locally cloned repos, and commit changes to them - and their local changes can be synchronized back with the "main" repo through a `git` operation known as pushing.
+From this point on, Alice and Bob can make changes in ther locally cloned repos, and commit changes to them - and their local changes can later be synchronized back with the "main" repo, through a `git` operation known as pushing.
+
+
+## Alice starts hacking - push
+
+Here, let's assume Alice wants to create a new file, let's call it `afile.txt`, and add some text to it; that can be easily achieved with `echo`ing and redirection, as previously. Also, we saw previously, that once a file is created with the right content, it should be added to staging area with `git add`, and then committed with `git commit` and a message:
+
+    user@PC:/tmp/A/TheProject$ echo "Initial line by Alice" >> afile.txt
+    user@PC:/tmp/A/TheProject$ git add afile.txt
+    user@PC:/tmp/A/TheProject$ git commit -m "afile.txt new file added"
+    [master 8709a34] afile.txt new file added
+     1 file changed, 1 insertion(+)
+     create mode 100644 afile.txt
+
+r2/scrshot_012
+
+Here, we can observe, that the file manager shows the new `afile.txt`; and the Git GUI client (after refresh) also shows this file, and the new commit in the history - however, we have to select the root directory of the `git` project (`/tmp/A/TheProject`) in order to see the whole history (otherwise, selecting the individual file nodes will show only those commits in history that are related to the respective file).
+
+Let's now check the status - it is implied we did a `cd /tmp/A/TheProject` previously:
+
+    user@PC:/tmp/A/TheProject$ git status
+    On branch master
+    Your branch is ahead of 'origin/master' by 1 commit.
+      (use "git push" to publish your local commits)
+
+    nothing to commit, working directory clean
+
+The `git` program lets us now that we're now "ahead" of the remote repository we cloned from "by 1 commit". In order to synchronise Alice's local changes with the "main" remote repo, we need to issue `git push`:
+
+    user@PC:/tmp/A/TheProject$ git push
+    warning: push.default is unset; its implicit value is changing in
+    Git 2.0 from 'matching' to 'simple'. To squelch this message
+    and maintain the current behavior after the default changes, use:
+
+      git config --global push.default matching
+
+    To squelch this message and adopt the new behavior now, use:
+
+      git config --global push.default simple
+
+    When push.default is set to 'matching', git will push local branches
+    to the remote branches that already exist with the same name.
+
+    In Git 2.0, Git will default to the more conservative 'simple'
+    behavior, which only pushes the current branch to the corresponding
+    remote branch that 'git pull' uses to update the current branch.
+
+    See 'git help config' and search for 'push.default' for further information.
+    (the 'simple' mode was introduced in Git 1.7.11. Use the similar mode
+    'current' instead of 'simple' if you sometimes use older versions of Git)
+
+    Counting objects: 4, done.
+    Delta compression using up to 4 threads.
+    Compressing objects: 100% (2/2), done.
+    Writing objects: 100% (3/3), 299 bytes | 0 bytes/s, done.
+    Total 3 (delta 0), reused 0 (delta 0)
+    remote: error: refusing to update checked out branch: refs/heads/master
+    remote: error: By default, updating the current branch in a non-bare repository
+    remote: error: is denied, because it will make the index and work tree inconsistent
+    remote: error: with what you pushed, and will require 'git reset --hard' to match
+    remote: error: the work tree to HEAD.
+    remote: error:
+    remote: error: You can set 'receive.denyCurrentBranch' configuration variable to
+    remote: error: 'ignore' or 'warn' in the remote repository to allow pushing into
+    remote: error: its current branch; however, this is not recommended unless you
+    remote: error: arranged to update its work tree to match what you pushed in some
+    remote: error: other way.
+    remote: error:
+    remote: error: To squelch this message and still keep the default behaviour, set
+    remote: error: 'receive.denyCurrentBranch' configuration variable to 'refuse'.
+    To /tmp/main/TheProject.git
+     ! [remote rejected] master -> master (branch is currently checked out)
+    error: failed to push some refs to '/tmp/main/TheProject.git'
+
+Now the `git` program lets us know of several problems:
+
+* `git push` in itself is not enough; the proper syntax for it is `git push which-remote what-branch`. Since here we have only one branch (`master`) and one remote (`origin`), it was easy to be misled, and to assume `git` would assume these as the default arguments for the push operation. However, this version of `git` (1.9) is a version where significant changes in behavior are planned for future versions, and therefore `git` refuses to make that assumption for us. Explicitly, we would have to say `git push origin master` (that is, "push the changes in local `master` branch, to the remote repo with URL specified by `origin`).
+* The remote repo refuses to update, because it is a non-bare repository (one with both a `.git` subfolder for history, and actual files), and pushing to a non-bare repository "will make the index and work tree inconsistent".
+
+So, first, instead of turning the "main" repo into a 'bare' one, let's go to the "main" repo (implying `cd /tmp/main/TheProject.git`) and set `receive.denyCurrentBranch` to `ignore`, so we emulate how an actual remote repository would behave:
+
+    user@PC:/tmp/main/TheProject.git$ git config receive.denyCurrentBranch ignore
+
+With this, our commits will still be pushed to the `.git` subfolder of the "main" repo, however, the work tree will remain in the old version as we left it, and so will not reflect these changes.
+
+Now, we can go back to Alice's repo (implying `cd /tmp/A/TheProject`), and try to push again. First, let's try the command `git push --all`, which is sometimes described online as "push all local branches to the remote":
+
+    user@PC:/tmp/A/TheProject$ git push --all
+    Counting objects: 4, done.
+    Delta compression using up to 4 threads.
+    Compressing objects: 100% (2/2), done.
+    Writing objects: 100% (3/3), 299 bytes | 0 bytes/s, done.
+    Total 3 (delta 0), reused 0 (delta 0)
+    To /tmp/main/TheProject.git
+       f183325..8709a34  master -> master
+
+This is the usual output of a succesfully completed `push` command, and thus our `git push --all` succeeded for now.
+
+scrshot_013
+
+Note that at this point, we can go back to the Git GUI client of the "main" repo, and even without refreshing, click the root node of the repository, and we will see Alice's commit show up in the history -- even if the file `afile.txt` itself is not in the work tree (and so is not shown in the Git GUI client either).
+
 
 
