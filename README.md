@@ -559,4 +559,139 @@ scrshot_013
 Note that at this point, we can go back to the Git GUI client of the "main" repo, and even without refreshing, click the root node of the repository, and we will see Alice's commit show up in the history -- even if the file `afile.txt` itself is not in the work tree (and so is not shown in the Git GUI client either).
 
 
+## Bob starts hacking - push and pull and automerge abort and rebase
+
+Let's assume that while Alice was doing her hacking in the previous subsection, Bob was also doing his own hacks. Bob, however, decided to add some content to the `README.md` file, instead of creating a new file. Since last we left him, Bob had just cloned the repository, he proceeds immediately with changing this file.
+
+As previously we had solved the issue of the "main" repo not being 'bare', here we can proceed with adding a line to the `README.md` using `bash` `echo` and redirection; then adding the changes to staging area with `git add`; committing the changes with `git commit`; and finally pushing the changes to "main" repo with `git push` - and we _might_ expect that all this will complete without problems:
+
+    user@PC:/tmp/B/TheProject_git$ echo "bob adding a line here" >> README.md
+    user@PC:/tmp/B/TheProject_git$ git add README.md
+    user@PC:/tmp/B/TheProject_git$ git commit -m 'bob edited README.md'
+    [master 689d651] bob edited README.md
+     1 file changed, 1 insertion(+)
+    user@PC:/tmp/B/TheProject_git$ git push --all
+    To /tmp/main/TheProject.git
+     ! [rejected]        master -> master (fetch first)
+    error: failed to push some refs to '/tmp/main/TheProject.git'
+    hint: Updates were rejected because the remote contains work that you do
+    hint: not have locally. This is usually caused by another repository pushing
+    hint: to the same ref. You may want to first integrate the remote changes
+    hint: (e.g., 'git pull ...') before pushing again.
+    hint: See the 'Note about fast-forwards' in 'git push --help' for details.
+
+Well, not so fast. The problem is now, that while Bob was hacking, Alice had already pushed a commit to the `master` branch - which Bob does not have. And, since `git` isn't certain in how to handle this situation, it asks Bob to first get the new commits (those that Bob doesn't have) from the "main" repo, and resolve potential conflicts locally, - before Bob is allowed to push his own commits.
+
+In this case, we'd use the command `git pull` (alternately, `git pull origin master` or `git pull --all`) to retrieve the latest (missing) commits from the "main" repo. However, if we enter:
+
+    user@PC:/tmp/B/TheProject_git$ git pull --all
+
+... we will immediately get a text file opened in a terminal text editor (like `nano`), saying:
+
+    Merge branch 'master' of /tmp/main/TheProject
+
+    # Please enter a commit message to explain why this merge is necessary,
+    # especially if it merges an updated upstream into a topic branch.
+
+What is happening here, is that `git` tried to automatically "merge" the states of the (remote) "main" repo, and the local repo of Bob; it managed to rectify the situation, but that means now it has to make an additional commit, and the message for that commit is now shown in a text editor so the user can edit it; once it is edited and saved and text editor exited (in `nano`, hit Ctrl-X to start exiting, then you will be prompted if you want to save the file, to which you can say Y or N, and then `nano` will exit, and the merge will be committed).
+
+However, here we don't really have a need for a merge per se, since we know Alice in her commit edited different file than Bob. So, at this moment, we could try adding a number- or hash-sign `#` in front of the "Merge branch 'master' .. " message, so it is interpreted as a comment instead of a message - then `git` will notice there is no commit message, which is not allowed, and it will abort the commit; and so the full terminal log becomes:
+
+    user@PC:/tmp/B/TheProject_git$ git pull --all
+    Fetching origin
+    remote: Counting objects: 4, done.
+    remote: Compressing objects: 100% (2/2), done.
+    remote: Total 3 (delta 0), reused 0 (delta 0)
+    Unpacking objects: 100% (3/3), done.
+    From /tmp/main/TheProject
+       f183325..8709a34  master     -> origin/master
+    error: Empty commit message.
+    Not committing merge; use 'git commit' to complete the merge.
+
+Let's check the current status:
+
+    user@PC:/tmp/B/TheProject_git$ git status
+    On branch master
+    Your branch and 'origin/master' have diverged,
+    and have 1 and 1 different commit each, respectively.
+      (use "git pull" to merge the remote branch into yours)
+
+    All conflicts fixed but you are still merging.
+      (use "git commit" to conclude merge)
+
+    Changes to be committed:
+
+      new file:   afile.txt
+
+Ideally, what we should have done in a case like this (had Bob been aware that a problem of this kind is ahead), is `git pull --rebase`, with which [your remote changes (C) will be applied before the local changes (D)](https://stackoverflow.com/questions/25430600/difference-between-git-pull-rebase-and-git-pull-ff-only). Let's try to undo the merge with [`git merge --abort`](https://stackoverflow.com/questions/11646107/you-have-not-concluded-your-merge-merge-head-exists):
+
+    user@PC:/tmp/B/TheProject_git$ git merge --abort
+    user@PC:/tmp/B/TheProject_git$ git status
+    On branch master
+    Your branch and 'origin/master' have diverged,
+    and have 1 and 1 different commit each, respectively.
+      (use "git pull" to merge the remote branch into yours)
+
+    nothing to commit, working directory clean
+
+Now we can try `git pull --rebase`:
+
+    user@PC:/tmp/B/TheProject_git$ git pull --rebase
+    First, rewinding head to replay your work on top of it...
+    Applying: bob edited README.md
+    user@PC:/tmp/B/TheProject_git$ git status
+    On branch master
+    Your branch is ahead of 'origin/master' by 1 commit.
+      (use "git push" to publish your local commits)
+
+    nothing to commit, working directory clean
+    user@PC:/tmp/B/TheProject_git$ git log --oneline
+    e69e8ec bob edited README.md
+    8709a34 afile.txt new file added
+    f183325 here is the second commit
+    e9fe842 this is my initial commit
+
+Ah, that's more like it - indeed, in this case (result of steps as outlined in the tutorial), there was really no need for an extra merge commit, as there was no real conflict, and now the history log looks fine. Also, if we refresh the Git GUI client at this time, we'll both see the exact same commits in history - and the `afile.txt` file visible in both the Git GUI client, and the file manager. All that remains for Bob, is to do a `git push`, so the "main" repo gets Bob's latest commits:
+
+    user@PC:/tmp/B/TheProject_git$ git push
+    warning: push.default is unset; its implicit value is changing in
+    Git 2.0 from 'matching' to 'simple'. To squelch this message
+    and maintain the current behavior after the default changes, use:
+
+      git config --global push.default matching
+
+    To squelch this message and adopt the new behavior now, use:
+
+      git config --global push.default simple
+
+    When push.default is set to 'matching', git will push local branches
+    to the remote branches that already exist with the same name.
+
+    In Git 2.0, Git will default to the more conservative 'simple'
+    behavior, which only pushes the current branch to the corresponding
+    remote branch that 'git pull' uses to update the current branch.
+
+    See 'git help config' and search for 'push.default' for further information.
+    (the 'simple' mode was introduced in Git 1.7.11. Use the similar mode
+    'current' instead of 'simple' if you sometimes use older versions of Git)
+
+    Counting objects: 5, done.
+    Delta compression using up to 4 threads.
+    Compressing objects: 100% (3/3), done.
+    Writing objects: 100% (3/3), 338 bytes | 0 bytes/s, done.
+    Total 3 (delta 0), reused 0 (delta 0)
+    To /tmp/main/TheProject.git
+       8709a34..e69e8ec  master -> master
+
+Again, we got the warning about `push.default is unset`; so we should have used, as in the previous case, `git push --all`, or `git push origin master`; however, the push itself succeeded, which is visible in the Git GUI client of "main" repo (after refresh and re-clicking the root node):
+
+r2/scrshot_014
+
+Conclusions:
+
+* Everytime you open a `git` repository, which is in a clean state, with intent to work on it, issue a `git pull --all` first, to make sure you pull all the latest commits, that may have popped up in the meantime, and that you might be missing - before you do any actual work (changes to files).
+* If you've already made some changes and committed, do a `git pull --rebase` first before you push, in case new commits have popped up while you were working (so that your commits are "replayed" "on top" of those new commits, and you can easily commit)
+
+
+
 
