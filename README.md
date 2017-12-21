@@ -187,10 +187,31 @@ At this point, let's see what the `git` status is:
     On branch master
     nothing to commit, working directory clean
 
-As the message notes, all looks good for the time bieng.
+As the message notes, all looks good, for the time bieng.
 
 
-## A bit on history log and commit hash labels
+## A bit on Markdown
+
+Note that the file we added, `README.md`, has an extension `.md` - this, by convention, is a file extension assigned to plain-text files, which are written with [Markdown](https://en.wikipedia.org/wiki/Markdown) formatting/markup.
+
+As a markup language, Markdown is significantly easier to write than, say, HTML or LaTeX; however, also the text formatting effects that can be achieved are few (fewer than HTML or LaTeX). Markdown is typically converted or "rendered" to HTML, so that the formatting becomes visible to the user.
+
+In a context of strictly local use, like in this tutorial, `.md` files are generally not different than normal plain-text `.txt` files - that is, if we open them in a plain-text editor, all we'll see is plain text (written according to Markdown conventions); if we open them in a specialized desktop Markdown editor, like [ReText](https://github.com/retext-project/retext) (among [many others](https://itsfoss.com/best-markdown-editors-linux/)), then might see formatted HTML text (in addition to the plain text source).
+
+If you want to play with Markdown, you can look up sites which offer "live preview", such as:
+
+* [Online Markdown Editor - Dillinger.io](https://dillinger.io/) - offers side-by-side live preview
+* [stackoverflow.com](https://stackoverflow.com/) (or any of the [Stack Exchange](https://stackexchange.com/) sites) - simply open any question, scroll down to "Your Answer", and start typing in the text field - and you will get a live preview below the text field; there is also a handy [advanced help »](https://stackoverflow.com/editing-help) in this editor
+
+We mention Markdown here, because most of the `git` online hosting provides, will by default parse `.md` files and show them as formatted HTML if they are chosen for browsing in their respective providers' web interfaces; in addition, `README.md` files are typically rendered even if only their containing directory is chosen for browsing (and not the `README.md` file explicitly). However, note that there may be differences in what kind of Markdown "flavour" each provider chooses to support:
+
+* Bitbucket, for instance, uses the flavor [CommonMark (with a few extensions)](https://confluence.atlassian.com/bitbucketserver/markdown-syntax-guide-776639995.html), and supports no inline HTML whatsoever
+* GitHub, for instance, supports the [GitHub Flavored Markdown Spec](https://github.github.com/gfm/), which allows inline HTML (for formatting Markdown itself cannot do)
+
+Again, this support is specifically only for automatic rendering of files in online `git` projects at a particular provider; offline i.e. locally, an `.md` file is just a plain-text file.
+
+
+## A bit on history log, and commit hashes as labels
 
 We can also use the `git log` command to check the history in this project:
 
@@ -209,11 +230,19 @@ There is one more piece of information, which may be confusing at first, and tha
 
 In principle, it would be easier to mark (or identify, or tag, or label) our commits with sequential numbers: for instance, this commit, as the initial commit, could be called revision "1"; then the next commit would become revision "2", then the next revision "3", - and so on. However, with `git` - as we shall see later - in principle, multiple users could start from a common point in history (say, the initial commit); and then, _simultaneously_, create their own versions of history by adding their own commits at random points in time. In that case, each of them would have revisions "2", "3", etc branching from the common revision "1", but which describe totally different commits.
 
-Then, if _both_ of them want to synchronize their changes with the central ("main") repository, it would be impossible to consistently apply the sequential labelling approach: either revision "2" would refer to multiple different commits, thus becoming useless - or the central repository would have to re-label everything upon synchonization, in which case one commit would have different labels in the "main" vs. the user's own copy of repository, which would likewise be useless.
+Then, if _both_ of them want to synchronize their changes with the central ("main") repository, it would be impossible to consistently apply the sequential labelling approach: either revision "2" would refer to multiple different commits, thus becoming useless - or the central repository would have to re-label everything upon synchonization, in which case one commit would have different labels in the "main" vs. the user's own copy of repository; which would likewise be useless.
 
-This is why `git` doesn't use sequential numbers for labelling - but instead [calculates](https://stackoverflow.com/questions/35430584/how-is-the-git-hash-calculated) a 160-bit [SHA-1](https://en.wikipedia.org/wiki/SHA-1) hash as a label. The idea behind this is that each and every commit will have a unique label - regardless of when and in which context it was made. Since the input for the hash is the commit's content and timestamps, SHA-1 (almost) guarantees that the hash calculated will be unique (in other words, SHA-1 ensures there is a very, very low probability, that the same hash will be calculated for two different commits in the same repository - which is otherwise known as a "collision", and is the only case where the hash as a commit label becomes useless).
+This is why `git` doesn't use sequential numbers for labelling - but instead [calculates](https://stackoverflow.com/questions/35430584/how-is-the-git-hash-calculated) a 160-bit [SHA-1](https://en.wikipedia.org/wiki/SHA-1) hash as a label. The idea behind this is that each and every commit will have a _unique_ label - regardless of when, and in which context, it was made. Since the input for the hash algorithm is the commit's content and timestamps, SHA-1 (almost) guarantees that the hash calculated will be unique (in other words, SHA-1 ensures there is a very, very low probability, that the same hash will be calculated for two different commits in the same repository - which is otherwise known as a "collision", and is the only case where the hash as a commit label becomes useless).
 
 
+## The "main" repository - second commit
 
+Just for the sake of discussion, let's add another commit to the "main" repository. But before that, let's first add a file in the project's directory, which we do *not* intend to track with `git`, let's call it `whatever.txt`:
+
+    echo "whatever" > whatever.txt
+
+r2/scrshot_008
+
+Note that at this point, the file manager recognizes `whatever.txt` as the same file of type as `README.md` - while the Git GUI manager (after a refresh) shows the `README.md` in full contrast since it is tracked by `git`, while `whatever.txt` is greyed out, as it is not tracked. Before we proceed, let's add some changes to `README.md`
 
 
