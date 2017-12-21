@@ -16,9 +16,9 @@ Before we get going, note that:
 This tutorial has been tested on git version 1.9.1 on Ubuntu 14.04, a GNU/Linux operating system (OS). As such, it should be easy to follow on similar OS, that follow the [Unix filesystem](https://en.wikipedia.org/wiki/Unix_filesystem) convention, provided that `git` is installed:
 
 * On Linux systems, use your package manager to install; say, on Ubuntu, you can just type `git` in a terminal, and it will remind you to `sudo apt-get install git` if not already installed
-* MacOS/OSX systems also follow the Unix filesystem convention, and similarly, you can open [Terminal.app](https://www.macworld.co.uk/feature/mac-software/how-use-terminal-on-mac-3608274/) and just type `git`, and you will be prompted to install [Command Line Developer Tools](https://www.macissues.com/2014/05/26/what-are-the-command-line-developer-tools-in-os-x/) that also contain `git`
-    * Note that both MacOS/OSX and Ubuntu, provide a command line intepreter (a.k.a. _shell_) called [`bash`](https://en.wikipedia.org/wiki/Bash_(Unix_shell))
-* For Windows, you can install [Git for Windows](https://git-scm.com/download/win), which will install a "Git Bash" program, which will then also provide the same `bash` shell (and an emulation of an Unix filesystem) with a `git` command, as under GNU/Linux or MacOS/OSX
+* macOS/OSX systems also follow the Unix filesystem convention, and similarly, you can open [Terminal.app](https://www.macworld.co.uk/feature/mac-software/how-use-terminal-on-mac-3608274/) and just type `git`, and you will be prompted to install [Command Line Developer Tools](https://www.macissues.com/2014/05/26/what-are-the-command-line-developer-tools-in-os-x/) that also contain `git`
+    * Note that both macOS/OSX and Ubuntu, provide a command line intepreter (a.k.a. _shell_) called [`bash`](https://en.wikipedia.org/wiki/Bash_(Unix_shell))
+* For Windows, you can install [Git for Windows](https://git-scm.com/download/win), which will install a "Git Bash" program, which will then also provide the same `bash` shell (and an emulation of an Unix filesystem) with a `git` command, as under GNU/Linux or macOS/OSX
 
 -----
 
@@ -651,7 +651,9 @@ Now we can try `git pull --rebase`:
     f183325 here is the second commit
     e9fe842 this is my initial commit
 
-Ah, that's more like it - indeed, in this case (result of steps as outlined in the tutorial), there was really no need for an extra merge commit, as there was no real conflict, and now the history log looks fine. Also, if we refresh the Git GUI client at this time, we'll both see the exact same commits in history - and the `afile.txt` file visible in both the Git GUI client, and the file manager. All that remains for Bob, is to do a `git push`, so the "main" repo gets Bob's latest commits:
+Ah, that's more like it - indeed, in this case (result of steps as outlined in the tutorial), there was really no need for an extra merge commit, as there was no real conflict, and now the history log looks fine. Or rather, there was no real conflict _per file_ (in terms of content/changes in a single file); the only conflict was the order of the commits as seen by `git`.
+
+Also, if we refresh the Git GUI client at this time, we'll both see the exact same commits in history - and the `afile.txt` file visible in both the Git GUI client, and the file manager. All that remains for Bob, is to do a `git push`, so the "main" repo gets Bob's latest commits:
 
     user@PC:/tmp/B/TheProject_git$ git push
     warning: push.default is unset; its implicit value is changing in
@@ -693,5 +695,382 @@ Conclusions:
 * If you've already made some changes and committed, do a `git pull --rebase` first before you push, in case new commits have popped up while you were working (so that your commits are "replayed" "on top" of those new commits, and you can easily commit)
 
 
+## Alice keeps hacking - file content-level conflict, and mergetool resolution
+
+Previously, we concluded that every time a fresh round of work starts, one should do a `git pull --all`. However, let us assume that Alice was unaware that Bob too started working in the same repository, and so didn't deem it necessary to do a `git pull --all` at the start of this round. And this time the intention is to edit `README.md`, which Bob has already changed in a commit that Alice hasn't pulled yet; as such, this will definitely cause a file-level conflict.
+
+So, last time we left Alice's repo, it was at revision "*8709a34 afile.txt new file added*", and since no new changes were pulled, Alices new changes will be over this version of the `README.md` file. Alice will simply add a new line to the file, and then do `git add` and commit:
+
+    user@PC:/tmp/A/TheProject$ echo "alice adding a new line" >> README.md
+    user@PC:/tmp/A/TheProject$ git status
+    On branch master
+    Your branch is up-to-date with 'origin/master'.
+
+    Changes not staged for commit:
+      (use "git add <file>..." to update what will be committed)
+      (use "git checkout -- <file>..." to discard changes in working directory)
+
+      modified:   README.md
+
+    no changes added to commit (use "git add" and/or "git commit -a")
+    user@PC:/tmp/A/TheProject$ git add README.md
+    user@PC:/tmp/A/TheProject$ git commit -m 'alice change of README.md'
+    [master 302855d] alice change of README.md
+     1 file changed, 1 insertion(+)
+
+So far, nothing seems controversial. It is always a good idea to check the state of the repository with `git status`, before making an add or a commit; however, in this case, since there was no pull at start, the repository is unaware of changes in the "main" repo, and so wrongly reports "_Your branch is up-to-date_" (which will reinforce the wrong impression that everything is fine).
+
+The conflict will become apparent as soon as we, as Alice, attempt to push to the "main" repository:
+
+    user@PC:/tmp/A/TheProject$ git push --all
+    To /tmp/main/TheProject.git
+     ! [rejected]        master -> master (fetch first)
+    error: failed to push some refs to '/tmp/main/TheProject.git'
+    hint: Updates were rejected because the remote contains work that you do
+    hint: not have locally. This is usually caused by another repository pushing
+    hint: to the same ref. You may want to first integrate the remote changes
+    hint: (e.g., 'git pull ...') before pushing again.
+    hint: See the 'Note about fast-forwards' in 'git push --help' for details.
+
+Here is the first sign of conflict - there are commits in "main" repo that Alice is missing. Taught by the previous experience, we immediately try `git pull --rebase` (instead of other forms of pull):
+
+    user@PC:/tmp/A/TheProject$ git pull --rebase
+    remote: Counting objects: 5, done.
+    remote: Compressing objects: 100% (3/3), done.
+    remote: Total 3 (delta 0), reused 0 (delta 0)
+    Unpacking objects: 100% (3/3), done.
+    From /tmp/main/TheProject
+       8709a34..e69e8ec  master     -> origin/master
+    First, rewinding head to replay your work on top of it...
+    Applying: alice change of README.md
+    Using index info to reconstruct a base tree...
+    M	README.md
+    Falling back to patching base and 3-way merge...
+    Auto-merging README.md
+    CONFLICT (content): Merge conflict in README.md
+    Failed to merge in the changes.
+    Patch failed at 0001 alice change of README.md
+    The copy of the patch that failed is found in:
+       /tmp/A/TheProject/.git/rebase-apply/patch
+
+    When you have resolved this problem, run "git rebase --continue".
+    If you prefer to skip this patch, run "git rebase --skip" instead.
+    To check out the original branch and stop rebasing, run "git rebase --abort".
+
+So, even if now rebase first did "_rewinding head to replay your work on top of it_", there is still a file-level conflict, in terms of changes of content to be applied to the `README.md` file, which is reported by "_CONFLICT (content): Merge conflict in README.md_".
+
+How can we resolve this conflict? It is actually possible to do it entirely from the command line (for example, see [here](http://perrymitchell.net/article/merging-and-unmerging-with-git/)) - however, it is also somewhat difficult. It is much easier to resolve content based conflicts using a GUI tool designed for that purpose. One of the tools available on Linux for that is [Meld](http://meldmerge.org/) (which also can be considered cross-platform, as there exist Windows and macOS builds).
+
+To call `meld` properly in a case where we got a "CONFLICT (content)" in `git` repo, we should simply run this command in the repository's directory:
+
+    git mergetool
+
+Upon running this command, the user is prompted to confirm the choice of a merging tool to call next; `git` keeps a list of several such programs, among which is also `meld`. If there are no other tools than `meld` installed on the system, `git` will automatically choose it as a merging tool, and eventually prompt:
+
+    user@PC:/tmp/A/TheProject$ git mergetool
+
+    This message is displayed because 'merge.tool' is not configured.
+    See 'git mergetool --tool-help' or 'git help config' for more details.
+    'git mergetool' will now attempt to use one of the following tools:
+    opendiff kdiff3 tkdiff xxdiff meld tortoisemerge gvimdiff diffuse diffmerge ecmerge p4merge araxis bc3 codecompare emerge vimdiff
+    Merging:
+    README.md
+
+    Normal merge conflict for 'README.md':
+      {local}: modified file
+      {remote}: modified file
+    Hit return to start merge resolution tool (meld):
+
+Upon pressing RETURN, `meld` is started for the conflicted file, in this case `README.md`:
+
+meldmerge01.png
+
+This form of usage is known as a 3-way merge:
+
+* The left window shows `*.LOCAL.*` in the filename, and shows the state of the `README.md` file at the last local commit
+* The right window shows `*.REMOTE.*` in the filename, and shows the state of the `README.md` file at the last remote commit (that one we didn't have locally before, but which we just pulled)
+* The center window shows the part of the file which is identical in both LOCAL and REMOTE versions (that is, the version of the file at the last common commit for both local and remote histories)
+
+The trick here is to edit the text in the central window, so it includes both the local and the remote missing state, then save that file and exit meld - upon which, `git` will consider the conflict to have been solved.
+
+In order to edit the text in the central window, we can either copy/paste text from the left/right windows into the central one - or even easier, we can left-click and Ctrl-left-click the arrows shown in meld, to insert the missing text. So, at this time, the only decision we need to make in order to resolve this conflict, is whether Bob's line goes first (and Alice's second), or if Alice's line goes first (and Bob's second).
+
+If we want to keep the chronological order of changes, then Bob's ("LOCAL") line should go first, and thus the final state of the central window would look like this:
+
+meldmerge02.png
+
+Note that the visualisation slightly changed now, and we have an indication that the center window file has been changed, with a small "harddrive/arrow" icon left of the central address bar, and an asterisk `*` near the central filename in the title bar. At this point, make sure the center window is focused (i.e. the text caret is in it), then hit Ctrl-S to save, then close `meld` - upon which, the `git mergetool` command will exit too.
+
+At this point, let us check the status:
+
+    user@PC:/tmp/A/TheProject$ git status
+    rebase in progress; onto e69e8ec
+    You are currently rebasing branch 'master' on 'e69e8ec'.
+      (all conflicts fixed: run "git rebase --continue")
+
+    Changes to be committed:
+      (use "git reset HEAD <file>..." to unstage)
+
+      modified:   README.md
+
+    Untracked files:
+      (use "git add <file>..." to include in what will be committed)
+
+      README.md.orig
+
+If we now inspect `README.md`, we'll notice it has the same content as the central window we saved in `meld`. So, we consider all conflicts fixed, and we can run, as recommended, "git rebase --continue":
+
+    user@PC:/tmp/A/TheProject$ git rebase --continue
+    Applying: alice change of README.md
+
+Let's re-check the status again:
+
+    user@PC:/tmp/A/TheProject$ git status
+    On branch master
+    Your branch is ahead of 'origin/master' by 1 commit.
+      (use "git push" to publish your local commits)
+
+    Untracked files:
+      (use "git add <file>..." to include in what will be committed)
+
+      README.md.orig
+
+    nothing added to commit but untracked files present (use "git add" to track)
+    user@PC:/tmp/A/TheProject$ git log --oneline
+    e0da4fb alice change of README.md
+    e69e8ec bob edited README.md
+    8709a34 afile.txt new file added
+    f183325 here is the second commit
+    e9fe842 this is my initial commit
+
+We don't really need `README.md.orig` anymore, so we can delete it with the `bash` command `rm` - and then we can try to `git push --all` again:
+
+    user@PC:/tmp/A/TheProject$ rm README.md.orig
+    user@PC:/tmp/A/TheProject$ git push --all
+    Counting objects: 5, done.
+    Delta compression using up to 4 threads.
+    Compressing objects: 100% (3/3), done.
+    Writing objects: 100% (3/3), 353 bytes | 0 bytes/s, done.
+    Total 3 (delta 0), reused 0 (delta 0)
+    To /tmp/main/TheProject.git
+       e69e8ec..e0da4fb  master -> master
+
+Finally, the push completed fine, - and if we refresh the Git GUI client of "main" repo, we'll see these commits in its history as well (note that, in spite of this, the GUI client of "main" repo will still show the state of `README.md` from some commits ago where it has only two lines!):
+
+r2/scrshot_015
+
+
+## Reset and checkout of "main" repo - moving through commit history
+
+Notice that so far, we've used the "main" repo as if it was a 'bare' server repo, that is, we were pushing content (or rather, commits) in its history "from the outside" (that is, from other clones of the repo). However, it is *not* a bare repo, in the sense that it has a work tree (working directory) files, and a `.git` subfolder which actually contains the commits.
+
+And since we didn't do anything special to address that, at this moment, the "main" repo shows the work tree files in a state from several commits ago, while it otherwise contains much newer commits in its history. How can we synchronise the work tree files with the latest commit? First of all, let's check its status and log:
+
+    user@PC:/tmp/main/TheProject.git$ git status
+    On branch master
+    Changes to be committed:
+      (use "git reset HEAD <file>..." to unstage)
+
+      modified:   README.md
+      deleted:    afile.txt
+
+    Untracked files:
+      (use "git add <file>..." to include in what will be committed)
+
+      whatever.txt
+
+    user@PC:/tmp/main/TheProject.git$ git log --oneline --decorate
+    e0da4fb (HEAD, master) alice change of README.md
+    e69e8ec bob edited README.md
+    8709a34 afile.txt new file added
+    f183325 here is the second commit
+    e9fe842 this is my initial commit
+
+Note that we used the `--decorate` option for `git log` in order to show where the HEAD of the repository points to, and it points to the latest commit in `master` branch (here: e0da4fb). On the other hand, `git` considers the old state of the files as _new_ changes to be committed!
+
+To bring the work tree files in sync with the HEAD, we could for one take `git`s own advice to use "`git reset HEAD <file>...`" - but since that command would have to be repeated for each and every file, we can use the stronger version `git reset --hard HEAD` to bring all work tree files in sync with the state in the HEAD commit.
+
+On the other hand, we can use a slightly different command: `git checkout HEAD` - what this does, is it takes the repository tracked files in the state at the HEAD commit from history, and copies them over the work tree files. However, this command will not work, if we have files in the staging area (i.e. "Changes to be committed:"), so at this time, `git checkout HEAD` would result only with:
+
+    user@PC:/tmp/main/TheProject.git$ git checkout HEAD
+    M	README.md
+    D	afile.txt
+
+... which is a notification that some file changes are staged, and the checkout won't really succeed - and indeed, the status is unchanged after running this command.
+
+We might be tempted to use `git reset --hard HEAD` and be done with it in one go - and thankfully, assumming that we need the untracked `whatever.txt` there (just not committed in the repo), this command will not delete it. Let's give it a try:
+
+    user@PC:/tmp/main/TheProject.git$ git reset --hard HEAD
+    HEAD is now at e0da4fb alice change of README.md
+    user@PC:/tmp/main/TheProject.git$ git status
+    On branch master
+    Untracked files:
+      (use "git add <file>..." to include in what will be committed)
+
+      whatever.txt
+
+    nothing added to commit but untracked files present (use "git add" to track)
+    user@PC:/tmp/main/TheProject.git$ git log --oneline --decorate
+    e0da4fb (HEAD, master) alice change of README.md
+    e69e8ec bob edited README.md
+    8709a34 afile.txt new file added
+    f183325 here is the second commit
+    e9fe842 this is my initial commit
+
+At this point, after a refresh, also the Git GUI for "main" repo will show the same state of the files (just make sure you select the latest commit in the history).
+
+r2/scrshot_016
+
+Here, let's do a review:
+
+* If we add a line to otherwise unchanged `README.md`, then it is considered changed, but "unstaged" by `git`
+* If then we do `git add README.md`, it is considered changed and staged
+* If then we do `git reset HEAD README.md`, the file goes back to being unstaged, but the changes (the new line) are still kept
+* If then we do `git checkout -- README.md`, the changes are lost, since the file is overwritten with its last committed state (this only works for unstaged files).
+
+Here is a command log, which demonstrates this on the Alice repo (simply to avoid messages about untracked files):
+
+    $ git status
+    On branch master
+    Your branch is up-to-date with 'origin/master'.
+
+    nothing to commit, working directory clean
+    $ echo "test line" >> README.md
+    $ git status
+    On branch master
+    Your branch is up-to-date with 'origin/master'.
+
+    Changes not staged for commit:
+      (use "git add <file>..." to update what will be committed)
+      (use "git checkout -- <file>..." to discard changes in working directory)
+
+      modified:   README.md
+
+    no changes added to commit (use "git add" and/or "git commit -a")
+    $ git add README.md
+    $ git status
+    On branch master
+    Your branch is up-to-date with 'origin/master'.
+
+    Changes to be committed:
+      (use "git reset HEAD <file>..." to unstage)
+
+      modified:   README.md
+    $ git checkout -- README.md   # says nothing, but doesn't change state, since currently README.md is staged!
+    $ git status                  # same as previous
+    On branch master
+    Your branch is up-to-date with 'origin/master'.
+
+    Changes to be committed:
+      (use "git reset HEAD <file>..." to unstage)
+
+      modified:   README.md
+    $ git reset HEAD README.md
+    Unstaged changes after reset:
+    M	README.md
+    $ git status
+    On branch master
+    Your branch is up-to-date with 'origin/master'.
+
+    Changes not staged for commit:
+      (use "git add <file>..." to update what will be committed)
+      (use "git checkout -- <file>..." to discard changes in working directory)
+
+      modified:   README.md
+
+    no changes added to commit (use "git add" and/or "git commit -a")
+    $ git checkout -- README.md   # says nothing, but this time state is changed:
+    $ git status                  # we're back to where we started:
+    On branch master
+    Your branch is up-to-date with 'origin/master'.
+
+    nothing to commit, working directory clean
+
+Having understood this difference between `git` checkout and reset, note that we can "move" through the history of a repo using a `git checkout HASH` command. What this means is, that after running this command, all of the files in the work tree of the repository will take up the state they have in the commit labeled as `HASH`. It is implied that no file changes can be staged while doing this.
+
+Let's again see this on an example, again using the Alice repo. Note that we will use the `bash` command `cat` to show the contents of a file in terminal.
+
+First, let's confirm that we're in a pristine state at the latest revision, HEAD, using status and log, then we "print" out the file to see what its contents are in this state:
+
+    $ git status
+    On branch master
+    Your branch is up-to-date with 'origin/master'.
+
+    nothing to commit, working directory clean
+    $ git log --oneline --decorate
+    e0da4fb (HEAD, origin/master, origin/HEAD, master) alice change of README.md
+    e69e8ec bob edited README.md
+    8709a34 afile.txt new file added
+    f183325 here is the second commit
+    e9fe842 this is my initial commit
+    $ cat README.md
+    This is my first line
+    Added my second line
+    bob adding a line here
+    alice adding a new line
+
+Now, let's checkout the revision "f183325 here is the second commit", and check the state as previously, using status, log and `cat`:
+
+    $ git checkout f183325
+    Note: checking out 'f183325'.
+
+    You are in 'detached HEAD' state. You can look around, make experimental
+    changes and commit them, and you can discard any commits you make in this
+    state without impacting any branches by performing another checkout.
+
+    If you want to create a new branch to retain commits you create, you may
+    do so (now or later) by using -b with the checkout command again. Example:
+
+      git checkout -b new_branch_name
+
+    HEAD is now at f183325... here is the second commit
+    $ git status
+    HEAD detached at f183325
+    nothing to commit, working directory clean
+    $ git log --oneline --decorate
+    f183325 (HEAD) here is the second commit
+    e9fe842 this is my initial commit
+    $ cat README.md
+    This is my first line
+    Added my second line
+
+Note that here:
+
+* By doing `git checkout HASH` of earlier revision labeled HASH, now HEAD "went down" and points at this earlier revision
+* This is indicated by shortened number of entries in `git log`
+* We're getting a note about a "'detached HEAD' state", which [means you are no longer on a branch, you have checked out a single commit in the history](https://stackoverflow.com/questions/10228760/fix-a-git-detached-head)
+* The file contents indeed correspond to this earlier revision in history
+
+So, since now HEAD moved, if we do `git checkout HEAD`, we will not change the state at all:
+
+    $ git checkout HEAD
+    $ git status
+    HEAD detached at f183325
+    nothing to commit, working directory clean
+
+Thus, if we want to go back to the latest commit, we should do `git checkout master` (that is, use the branch name):
+
+    $ git checkout master
+    Previous HEAD position was f183325... here is the second commit
+    Switched to branch 'master'
+    Your branch is up-to-date with 'origin/master'.
+    $ git status
+    On branch master
+    Your branch is up-to-date with 'origin/master'.
+
+    nothing to commit, working directory clean
+    $ git log --oneline --decorate
+    e0da4fb (HEAD, origin/master, origin/HEAD, master) alice change of README.md
+    e69e8ec bob edited README.md
+    8709a34 afile.txt new file added
+    f183325 here is the second commit
+    e9fe842 this is my initial commit
+    $ cat README.md
+    This is my first line
+    Added my second line
+    bob adding a line here
+    alice adding a new line
+
+These were some of the crucial `git` concepts and approaches, when dealing with multiple users working in a single branch (here, the default branch, `master`).
 
 
