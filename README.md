@@ -1159,5 +1159,80 @@ Interestingly, note that after the push, the "main" repo still does not show the
 Well, that passed smoothly - let's see if Bob too will have such luck...
 
 
+## Bob branches out
+
+As previously, let's first start by having Bob pull from "main" repo:
+
+    user@PC:/tmp/B/TheProject_git$ git pull --all
+    Fetching origin
+    remote: Counting objects: 8, done.
+    remote: Compressing objects: 100% (6/6), done.
+    remote: Total 6 (delta 1), reused 0 (delta 0)
+    Unpacking objects: 100% (6/6), done.
+    From /tmp/main/TheProject
+       e69e8ec..e0da4fb  master     -> origin/master
+     * [new branch]      a-branch   -> origin/a-branch
+    Updating e69e8ec..e0da4fb
+    Fast-forward
+     README.md | 1 +
+     1 file changed, 1 insertion(+)
+    user@PC:/tmp/B/TheProject_git$ git log --oneline --decorate --graph
+    * e0da4fb (HEAD, origin/master, origin/HEAD, master) alice change of README.md
+    * e69e8ec bob edited README.md
+    * 8709a34 afile.txt new file added
+    * f183325 here is the second commit
+    * e9fe842 this is my initial commit
+
+Interestingly, while the pull did report that the new branch by Alice, `a-branch`, has been retrieved - it is _not_ reported in the `git log`; one reason could be, that we've not switched to `a-branch` yet.
+
+So, if Bob creates a new branch now, it will be "split off" from the last common revision with the `master` branch, which is again here labeled with hash e0da4fb. So, let's have Bob create a new branch, `b-branch`, and switch to it:
+
+    user@PC:/tmp/B/TheProject_git$ git checkout -b b-branch
+    Switched to a new branch 'b-branch'
+    user@PC:/tmp/B/TheProject_git$ git status
+    On branch b-branch
+    nothing to commit, working directory clean
+    user@PC:/tmp/B/TheProject_git$ git log --oneline --decorate --graph
+    * e0da4fb (HEAD, origin/master, origin/HEAD, master, b-branch) alice change of README.md
+    * e69e8ec bob edited README.md
+    * 8709a34 afile.txt new file added
+    * f183325 here is the second commit
+    * e9fe842 this is my initial commit
+
+Notice that after switching to the new branch `b-branch`, both status and log `--decorate`, report this branch in their outputs - although, Alice's `a-branch` is still ignored in the log. So, let's have Bob change the `README.md`, and commit that change in this new `b-branch`:
+
+    user@PC:/tmp/B/TheProject_git$ echo 'b-branch (bob) adding line to README' >> README.md
+    user@PC:/tmp/B/TheProject_git$ git add README.md
+    user@PC:/tmp/B/TheProject_git$ git commit -m 'b-branch (bob) README edit'
+    [b-branch f9418cf] b-branch (bob) README edit
+     1 file changed, 1 insertion(+)
+
+Went fine so far; let's see how the push to "main" will go:
+
+    user@PC:/tmp/B/TheProject_git$ git push --all
+    Counting objects: 7, done.
+    Delta compression using up to 4 threads.
+    Compressing objects: 100% (3/3), done.
+    Writing objects: 100% (3/3), 344 bytes | 0 bytes/s, done.
+    Total 3 (delta 1), reused 0 (delta 0)
+    To /tmp/main/TheProject.git
+     * [new branch]      b-branch -> b-branch
+    user@PC:/tmp/B/TheProject_git$ git log --oneline --decorate --graph --all
+    * f9418cf (HEAD, origin/b-branch, b-branch) b-branch (bob) README edit
+    | * 6e26ae4 (origin/a-branch) a-branch change of README
+    |/
+    * e0da4fb (origin/master, origin/HEAD, master) alice change of README.md
+    * e69e8ec bob edited README.md
+    * 8709a34 afile.txt new file added
+    * f183325 here is the second commit
+    * e9fe842 this is my initial commit
+
+Note here that we've used `--all` option for `git log`, which we can interpret as "show all branches" - even if the `git help log` is somewhat cryptic about this option: "_Pretend as if all the refs in refs/ are listed on the command line as <commit>_". Regardless, it _does_ show both `a-branch` and `b-branch` now, and it _does_ show a (textual) graphical indication of branching. Something similar is visible in the Git GUI client (after refresh):
+
+r2/scrshot_018
+
+Note that in the screenshot, the Git GUI clients are refreshed both for "main" and Bob's repos - and they indeed show the same history, also in respect to branches (while with `git log` from the command line, there are slight differences in naming: "main" might just refer to `a-branch`, while Bob's repo would refer to it as `origin/a-branch`.
+
+Well, that was nice - both Alice and Bob edited the same `README.md` file, but in their own separate branches, and there were no conflicts whatsoever reported by `git`. However, now the `master` branch has neither of these contributions - and for the `master` branch to have them, we'll have to perform a manual merge.
 
 
