@@ -5,7 +5,7 @@
 # python copy-rename-screenshots.py
 
 """
-The problem: assuming file structure like this in INDIR=imgscrshot/:
+The problem: assuming file structure like this in INDIR:
 
 ├── r1
 │   ├── scrshot_001_1.png

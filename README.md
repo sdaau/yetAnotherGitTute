@@ -52,11 +52,11 @@ First, fire up a terminal, and let's create a directory under `/tmp` called `mai
 
     mkdir /tmp/main
 
-r1/scrshot_001.png
+scrshot_001.png
 
 We should be presented with no other messages, and another prompt - meaning the operation succeeded:
 
-r1/scrshot_002.png
+scrshot_002.png
 
 We can now switch to this newly created directory in the terminal, by executing the `bash` command for "change directory", `cd`:
 
@@ -64,25 +64,25 @@ We can now switch to this newly created directory in the terminal, by executing 
 
 We should be presented with no other messages, just another prompt (although the prompt might indicate the new current directory):
 
-r1/scrshot_003
+scrshot_003.png
 
 Now, let's create a new directory for what will become the "main" `git` repository - let's call it `TheProject.git`. We could run `mkdir /tmp/main/TheProject.git` (that is, by specifying an [absolute path](https://en.wikipedia.org/wiki/Path_(computing)#Absolute_and_relative_paths)) - however, now that we're already in `/tmp/main` as our current working directory, we might as well just run:
 
     mkdir TheProject.git
 
-r1/scrshot_004
+scrshot_004.png
 
 ... and then we can change to `TheProject.git` with:
 
     cd TheProject.git
 
-r1/scrshot_005
+scrshot_005.png
 
 Now that we're in the `/tmp/main/TheProject.git` directory, which is otherwise empty, we can finally initialize it as a `git` repository, by running the command `git init`:
 
     git init
 
-r1/scrshot_006
+scrshot_006.png
 
 Note that we get a response to this command in the terminal this time:
 
@@ -90,13 +90,13 @@ Note that we get a response to this command in the terminal this time:
 
 However, note also, that our file manager still shows the `TheProject.git` folder as empty - but if we turn on showing of hidden files (on Windows, see [Show hidden files](https://support.microsoft.com/en-us/help/14201/windows-show-hidden-files); on macOS, use [CMD-Shift-. (dot)](https://www.macworld.co.uk/how-to/mac-software/how-show-hidden-files-library-folder-mac-3520878/); on Ubuntu GNU/Linux, Ctrl-H), we'll see something else:
 
-r1/scrshot_007
+scrshot_007.png
 
 There is now a `.git` subfolder in the `TheProject.git` folder - hidden by default on Unix filesystems, since its name starts with a `.` (dot). It contains different subfolders, such as `branches`, `hooks`, `objects`, `refs` etc. - we won't go into details, but it is here that the commit history of the project will be saved.
 
 However, in typical working use, we usually do not need to concern ourselves with the details of the contents in the `.git` subfolder - which is why it is by default named in such a way to be hidden, so it "gets out of the way". In the terminal, we can confirm the same by calling the Unix listing command, `ls`:
 
-r1/scrshot_008
+scrshot_008.png
 
 Note that the first time we call `ls`, we simply get nothing listed (we get the prompt back again); however if we call `ls -la`, which lists hidden files, we do get the `.git` subfolder listed:
 
@@ -117,7 +117,7 @@ Now that we're aware of this, we can go back to hiding/ignoring the `.git` subfo
 
 At this point, since our "main" repository is initialized as a Git project, we can also open the directory `/tmp/main/TheProject.git` in the Git GUI client:
 
-r2/scrshot_001
+scrshot_009.png
 
 ... and we will not get any errors - however, since we have no commits nor content, nothing will be shown in the Git GUI client.
 
@@ -129,7 +129,7 @@ However, we can also use the `bash` command line to both create a file, and popu
 
 The terminal again responds with no messages and just a prompt, indicating the command completed succesfully:
 
-r2/scrshot_003 (skip 2, bad)
+scrshot_011.png (skip scrshot_010, bad)
 
 Note that at this point, the file manager does recognize and shows the `README.md` file automatically - while the Git GUI client might have to have its "refresh" button clicked first, but it still shows the new file greyed out. That is due to the file not being "tracked" by git, even if it does now exist in the project directory.
 
@@ -137,13 +137,13 @@ In order to start tracking the history of this file in the `git` project: execut
 
     git add README.md
 
-r2/scrshot_004
+scrshot_012.png
 
 Again, the terminal responds with nothing but a prompt, as a sign of succesfully executed command. Also, after being refreshed (after the `git add` command is ran), the Git GUI client now shows the file without it being greyed out - meaning that this file is now tracked in `git` history. Thus, the Git GUI client shows us the status and state of the `git` project - while a file manager typically does not show this status (although, there may be plugins that add that functionality).
 
 At this point, it is proper to check the status of the `git` project, by running `git status`:
 
-r2/scrshot_005
+scrshot_013.png
 
 * Note: Since the screenshot is too small to show the entire terminal log, in this code snippet (and others), both the `bash` command, and its output, are shown - to make a difference between them, the prompt (up to its end `$`) is also added. If you're copy/pasting such commands in your terminal, make sure you copy the command line (e.g. `git status`) _excluding_ the prompt prefix (up to, and including, `$ `) as a single line.
 * On those code snippets where there is no prompt, each line represents one command (line).
@@ -193,11 +193,11 @@ After the identity for this `git` repo is specified, repeating the `git commit` 
 
 At this time, we can also refresh the Git GUI client, and observe that it starts listing history of this `git` project - just a single entry for now, identified by the commit message ("this is my initial commit"):
 
-r2/scrshot_006
+scrshot_014.png
 
 In the `giggle` Git GUI client, selecting the project folder entry will show no contents in the window, and the history entries for the entire repository - but if we select the file entry for `README.md`, then also its text contents will be shown, as well as a slice of the history relevant to this file:
 
-r2/scrshot_007
+scrshot_015.png
 
 At this point, let's see what the `git` status is:
 
@@ -265,7 +265,7 @@ Just for the sake of discussion, let's add another commit to the "main" reposito
 
     echo "whatever" > whatever.txt
 
-r2/scrshot_008
+scrshot_016.png
 
 Note that at this point, the file manager recognizes `whatever.txt` as the same file of type as `README.md` - while the Git GUI manager (after a refresh) shows the `README.md` in full contrast, since it is tracked by `git`; while `whatever.txt` is greyed out, as it is not tracked.
 
@@ -273,7 +273,7 @@ Before we proceed, let's add some changes to `README.md` - again, we _could_ use
 
     echo "Added my second line" >> README.md
 
-r2/scrshot_009
+scrshot_017.png
 
 At this point, the file manager won't show anything new by itself - however, the Git GUI client (after a refresh) will show a small plus `+` next to the `README.md` entry - indicating that there have been changes made to this file; however, it still shows the old (or the latest committed) state of `README.md` as text (that is, only the first line of text is shown).
 
@@ -368,7 +368,7 @@ Now, let's say we decide to commit the changes in `README.md` anyways - then we 
      1 file changed, 1 insertion(+)
     user@PC:/tmp/main/TheProject.git$
 
-r2/scrshot_010
+scrshot_018.png
 
 At this point, note that: what the file manager displays, hasn't really changed; however, the Git GUI client (after refresh), now shows both lines of the text in `README.md`, and also shows two entries in the history graph - as we'd expect. As a wrap up, let's just check the status, and the history log, of this repo from the command line -- note that `git log --oneline` gives a much more reduced and compact view of the history log than what we've seen previously:
 
@@ -425,7 +425,7 @@ Likewise, Bob could do:
 
 Note that here, Bob explicitly specified to `git` the local repo folder name that the repository should be cloned into (that is, `TheProject_git`), by adding it after the main repo URL/path. In other words - you can, in principle, name the folder containing your local copy of a `git` project anything you want.
 
-r2/scrshot_011
+scrshot_019.png
 
 At this point, note that:
 
@@ -488,7 +488,7 @@ Here, let's assume Alice wants to create a new file, let's call it `afile.txt`, 
      1 file changed, 1 insertion(+)
      create mode 100644 afile.txt
 
-r2/scrshot_012
+scrshot_020.png
 
 Here, we can observe, that the file manager shows the new `afile.txt`; and the Git GUI client (after refresh) also shows this file, and the new commit in the history - however, we have to select the root directory of the `git` project (`/tmp/A/TheProject`) in order to see the whole history (otherwise, selecting the individual file nodes will show only those commits in history that are related to the respective file).
 
@@ -572,7 +572,7 @@ Now, we can go back to Alice's repo (implying `cd /tmp/A/TheProject`), and try t
 
 This is the usual output of a succesfully completed `push` command, and thus our `git push --all` succeeded for now.
 
-scrshot_013
+scrshot_021.png
 
 Note that at this point, we can go back to the Git GUI client of the "main" repo, and even without refreshing, click the root node of the repository, and we will see Alice's commit show up in the history -- even if the file `afile.txt` itself is not in the work tree (and so is not shown in the Git GUI client either).
 
@@ -705,7 +705,7 @@ Also, if we refresh the Git GUI client at this time, we'll both see the exact sa
 
 Again, we got the warning about `push.default is unset`; so we should have used, as in the previous case, `git push --all`, or `git push origin master`; however, the push itself succeeded, which is visible in the Git GUI client of "main" repo (after refresh and re-clicking the root node):
 
-r2/scrshot_014
+scrshot_022.png
 
 Conclusions:
 
@@ -875,7 +875,7 @@ We don't really need `README.md.orig` anymore, so we can delete it with the `bas
 
 Finally, the push completed fine, - and if we refresh the Git GUI client of "main" repo, we'll see these commits in its history as well (note that, in spite of this, the GUI client of "main" repo will still show the state of `README.md` from some commits ago where it has only two lines!):
 
-r2/scrshot_015
+scrshot_023.png
 
 
 ## Reset and checkout of "main" repo - moving through commit history
@@ -937,7 +937,7 @@ We might be tempted to use `git reset --hard HEAD` and be done with it in one go
 
 At this point, after a refresh, also the Git GUI for "main" repo will show the same state of the files (just make sure you select the latest commit in the history).
 
-r2/scrshot_016
+scrshot_024.png
 
 Here, let's do a review:
 
@@ -1170,7 +1170,7 @@ Uncontroversial so far; let's see how the push to "main" will go:
 
 Note here that we've used `--graph` option for `git log`, which would "_draw a text-based graphical representation of the commit history on the left hand side_"; however, there aren't enough commits at the moment, to really make the graphical representation of branching obvious (it is just mere asterisks `*` on the left for the time being). Something similar is visible in the Git GUI client:
 
-r2/scrshot_017
+scrshot_025.png
 
 Interestingly, note that after the push, the "main" repo still does not show the new `a-branch` in its `git log` terminal output - however, the Git GUI client shows it!
 
@@ -1247,7 +1247,7 @@ Went fine so far; let's see how the push to "main" will go:
 
 Note here that we've used `--all` option for `git log`, which we can interpret as "show all branches" - even if the `git help log` is somewhat cryptic about this option: "_Pretend as if all the refs in refs/ are listed on the command line as <commit>_". Regardless, it _does_ show both `a-branch` and `b-branch` now, and it _does_ show a (textual) graphical indication of branching. Something similar is visible in the Git GUI client (after refresh):
 
-r2/scrshot_018
+scrshot_026.png
 
 Note that in the screenshot, the Git GUI clients are refreshed both for "main" and Bob's repos - and they indeed show the same history, also in respect to branches (while with `git log` from the command line, there are slight differences in naming: "main" might just refer to `a-branch`, while Bob's repo would refer to it as `origin/a-branch`.
 
@@ -1545,7 +1545,7 @@ And - we're basically done with merging the branches. Let's just try pulling the
 
 And finally, all seems to be fine. At this point, the state of the repositories is like this:
 
-r2/scrshot_019
+scrshot_027.png
 
 Note that the Git GUI clients, for all three repo directories, show graphically the same merging process in their graphs.
 
