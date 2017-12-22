@@ -1071,6 +1071,93 @@ Thus, if we want to go back to the latest commit, we should do `git checkout mas
     bob adding a line here
     alice adding a new line
 
+And so, we've confirmed we're back where we started.
+
 These were some of the crucial `git` concepts and approaches, when dealing with multiple users working in a single branch (here, the default branch, `master`).
+
+-----
+
+## Multiple users with own branches
+
+As the tutorial shows so far, it is very easy to end up dealing with conflicts, when working in a single branch (here the default, `master` branch), even if there are only two users pushing to the "main" (remote) repo. Clearly, noone would want to deal with stuff like conflicts daily.
+
+In `git`, that friction can be somewhat reduced, by allowing each user to have their own, _separate_ branch. Basically, each user would start from a known commit in `master` branch, say HEAD - and then, from there, branch out to their own branch. Then, they can keep hacking the very same files (i.e. `README.md`) in their respective branches, and conflicts like the ones described previously, would not occur.
+
+Of course, this also means that, in general, individual branches will not really "know" what goes on in other branches (and this goes for the default `master` branch too), unless a merge is performed. This also means that the contributions from all the users will not be in the same place (at the same branch).
+
+So, in order to gather all the contributions in the same branch, typically a merge with the `master` branch is performed - the frequency of doing this, is a matter of agreement of the users of the repository. During such merges, we can again expect conflicts - however, if the merge is agreed upon by the users in advance, it is likely that the merging procedure may be less painful, than the conflict handling described so far in this tutorial for single branch use.
+
+What commands can we use to operate with new branches? As noted in [Git - Basic Branching and Merging](https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging), there exists:
+
+* a `git branch newbranch` command, which creates a new branch with name "newbranch" - but this command simply creates the branch, it doesn't _switch_ to the new branch
+* a `git checkout newbranch` command - we mentioned previously that `checkout` can be used to switch between commits, but it can be also used to switch to branches (here, it would switch to the branch named "newbranch")
+* a shorthand for both of these commands would be `git checkout -b newbranch`
+
+Let's now see how this would work with the repos of Alice and Bob; having learned from the experience so far, the first thing we'll have them do each, is to pull the latest commits from the "main" repo.
+
+
+## Alice branches out
+
+Let's start by having Alice pull from "main" repo (even if we expect Alice's repo to be in sync at this moment):
+
+    user@PC:/tmp/A/TheProject$ git pull --all
+    Fetching origin
+    Already up-to-date.
+    user@PC:/tmp/A/TheProject$ git log --oneline --decorate
+    e0da4fb (HEAD, origin/master, origin/HEAD, master) alice change of README.md
+    e69e8ec bob edited README.md
+    8709a34 afile.txt new file added
+    f183325 here is the second commit
+    e9fe842 this is my initial commit
+
+So, if Alice creates a new branch now, it will be "split off" from the last common revision with the `master` branch, which is here labeled with hash e0da4fb. So, let's have Alice create a new branch, `a-branch`, and switch to it:
+
+    user@PC:/tmp/A/TheProject$ git checkout -b a-branch
+    Switched to a new branch 'a-branch'
+    user@PC:/tmp/A/TheProject$ git status
+    On branch a-branch
+    nothing to commit, working directory clean
+    $ git log --oneline --decorate
+    e0da4fb (HEAD, origin/master, origin/HEAD, master, a-branch) alice change of README.md
+    e69e8ec bob edited README.md
+    8709a34 afile.txt new file added
+    f183325 here is the second commit
+    e9fe842 this is my initial commit
+
+Notice that after switching to the new branch, both status and log `--decorate`, report this branch in their outputs. So, let's have Alice change the `README.md`, and commit that change in this new branch:
+
+    user@PC:/tmp/A/TheProject$ echo 'a-branch added line by alice' >> README.md
+    user@PC:/tmp/A/TheProject$ git add README.md
+    user@PC:/tmp/A/TheProject$ git commit -m 'a-branch change of README'
+    [a-branch 6e26ae4] a-branch change of README
+     1 file changed, 1 insertion(+)
+
+Uncontroversial so far; let's see how the push to "main" will go:
+
+    $ git push --all
+    Counting objects: 5, done.
+    Delta compression using up to 4 threads.
+    Compressing objects: 100% (3/3), done.
+    Writing objects: 100% (3/3), 338 bytes | 0 bytes/s, done.
+    Total 3 (delta 1), reused 0 (delta 0)
+    To /tmp/main/TheProject.git
+     * [new branch]      a-branch -> a-branch
+    $ git log --oneline --decorate --graph
+    * 6e26ae4 (HEAD, origin/a-branch, a-branch) a-branch change of README
+    * e0da4fb (origin/master, origin/HEAD, master) alice change of README.md
+    * e69e8ec bob edited README.md
+    * 8709a34 afile.txt new file added
+    * f183325 here is the second commit
+    * e9fe842 this is my initial commit
+
+Note here that we've used `--graph` option for `git log`, which would "_draw a text-based graphical representation of the commit history on the left hand side_"; however, there aren't enough commits at the moment, to really make the graphical representation of branching obvious (it is just mere asterisks `*` on the left for the time being). Something similar is visible in the Git GUI client:
+
+r2/scrshot_017
+
+Interestingly, note that after the push, the "main" repo still does not show the new `a-branch` in its `git log` terminal output - however, the Git GUI client shows it!
+
+Well, that passed smoothly - let's see if Bob too will have such luck...
+
+
 
 
