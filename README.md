@@ -1236,7 +1236,7 @@ Note that in the screenshot, the Git GUI clients are refreshed both for "main" a
 Well, that was nice - both Alice and Bob edited the same `README.md` file, but in their own separate branches, and there were no conflicts whatsoever reported by `git`. However, now the `master` branch has neither of these contributions - and for the `master` branch to have them, we'll have to perform a manual merge.
 
 
-## Merging branches back to master
+## Merging branches back to master - branch upstream tracking, octopus merge
 
 Recall that here we consider the "main" repo to be a stand-in (or simulation) for a remote (online) 'bare' repository. When we have a 'bare' repository, we typically cannot perform branching or merging from the command line (although, here we could, as "main" is not a 'bare' repo). So, in a typical context, it would be either Alice or Bob that would perform the merge of changes in the branches back to master.
 
@@ -1354,3 +1354,193 @@ Ah - that's more like it; now we can see our local `a-branch` tracks the remote 
 
 So let's get back to the topic now - which was merging the commits in `a-branch` and `b-branch` in the `master` branch.
 
+[Typically](https://stackoverflow.com/questions/5601931/best-and-safest-way-to-merge-a-git-branch-into-master/#5602109), we'd have to checkout `master` branch, then while in master, run `git merge a-branch`, and then `git merge b-branch`; this will however result with two [separate commits](https://stackoverflow.com/questions/366860/when-would-you-use-the-different-git-merge-strategies/#366940). On the other hand, we could use the so-called "octopus" merge strategy in git, by calling `git merge a-branch b-branch`, which would result with a single commit; however it [refuses to do a complex merge that needs manual resolution](https://stackoverflow.com/questions/16208144/how-do-i-merge-multiple-branches-into-master/#16238928).
+
+So, since in this example, both `a-branch` and `b-branch` changed `README.md`, we would expect a file-level content conflict that would have to be resolved manually - meaning, an "octopus" merge would fail. Still, let's give it a try - but first, we should make sure we have both `a-branch` and `b-branch` show up as local branches, so that we can merge them in (a nice way to check is to try `git merge b-` and then press TAB in terminal; if it autocompletes, the local branch is available):
+
+    user@PC:/tmp/A/TheProject$ git status
+    On branch a-branch
+    Your branch is up-to-date with 'origin/a-branch'.
+
+    nothing to commit, working directory clean
+    user@PC:/tmp/A/TheProject$ git branch -vv
+    * a-branch 6e26ae4 [origin/a-branch] a-branch change of README
+      master   e0da4fb [origin/master] alice change of README.md
+    user@PC:/tmp/A/TheProject$ git checkout b-branch
+    Branch b-branch set up to track remote branch b-branch from origin.
+    Switched to a new branch 'b-branch'
+    user@PC:/tmp/A/TheProject$ git branch -vv
+      a-branch 6e26ae4 [origin/a-branch] a-branch change of README
+    * b-branch f9418cf [origin/b-branch] b-branch (bob) README edit
+      master   e0da4fb [origin/master] alice change of README.md
+
+Nice - by checking out `b-branch`, we now have it as a local branch. Now, let's checkout `master`, and try to do an "octopus" merge with both `a-branch` and `b-branch`:
+
+    user@PC:/tmp/A/TheProject$ git checkout master
+    Switched to branch 'master'
+    Your branch is up-to-date with 'origin/master'.
+    user@PC:/tmp/A/TheProject$ git merge a-branch b-branch
+    Fast-forwarding to: a-branch
+    Trying simple merge with b-branch
+    Simple merge did not work, trying automatic merge.
+    Auto-merging README.md
+    ERROR: content conflict in README.md
+    fatal: merge program failed
+    Automatic merge failed; fix conflicts and then commit the result.
+    user@PC:/tmp/A/TheProject$ git status
+    On branch master
+    Your branch is up-to-date with 'origin/master'.
+
+    You have unmerged paths.
+      (fix conflicts and run "git commit")
+
+    Unmerged paths:
+      (use "git add <file>..." to mark resolution)
+
+      both modified:      README.md
+
+    no changes added to commit (use "git add" and/or "git commit -a")
+    user@PC:/tmp/A/TheProject$ git mergetool
+
+    This message is displayed because 'merge.tool' is not configured.
+    See 'git mergetool --tool-help' or 'git help config' for more details.
+    'git mergetool' will now attempt to use one of the following tools:
+    opendiff kdiff3 tkdiff xxdiff meld tortoisemerge gvimdiff diffuse diffmerge ecmerge p4merge araxis bc3 codecompare emerge vimdiff
+    Merging:
+    README.md
+
+    Normal merge conflict for 'README.md':
+      {local}: modified file
+      {remote}: modified file
+    Hit return to start merge resolution tool (meld):
+
+Well, since the first of the branches, `a-branch`,  was easy to merge without intervention (that is, it "fast-forwarded"), we only had a single conflict when thereafter trying to merge `b-branch`; and so the repository allowed us to resolve the confict manually with `git mergetool` - that is, using `meld`, as we used it previously. Again, we have a "3-way merge" situation, similar to previously:
+
+meldmerge03.png
+
+And similarly, if we want to resolve the conflict chronologically, first we'll add the content from Alice, and then from Bob:
+
+meldmerge04.png
+
+Again, once we're done putting in lines of text content, we focus on the center window in, Ctrl-S to save, then close `meld` to have the `git mergetool` command exit - and so the status becomes:
+
+    user@PC:/tmp/A/TheProject$ git status
+    On branch master
+    Your branch is up-to-date with 'origin/master'.
+
+    All conflicts fixed but you are still merging.
+      (use "git commit" to conclude merge)
+
+    Changes to be committed:
+
+      modified:   README.md
+
+    Untracked files:
+      (use "git add <file>..." to include in what will be committed)
+
+      README.md.orig
+
+Here, let's try just `git commit` as `git` itself recommends (and then we can delete `README.md.orig` as we won't need it):
+
+    user@PC:/tmp/A/TheProject$ git commit
+
+Here a text editor is started (on Ubuntu, `nano` is started in the terminal), so as to provide us with the default merging commit message, and give us a chance to change it:
+
+      GNU nano 2.2.6            File: /tmp/A/TheProject/.git/COMMIT_EDITMSG
+
+    Merge branches 'a-branch' and 'b-branch'
+
+    Conflicts:
+            README.md
+    #
+    # It looks like you may be committing a merge.
+    ...
+
+Let's say we're happy with the commit message - all we need to do is simply exit the text editor `nano` using Ctrl-X; and in the terminal, `git commit` will conclude like so:
+
+    user@PC:/tmp/A/TheProject$ git commit
+    [master e967546] Merge branches 'a-branch' and 'b-branch'
+    user@PC:/tmp/A/TheProject$ rm README.md.orig
+    user@PC:/tmp/A/TheProject$ git status
+    On branch master
+    Your branch is ahead of 'origin/master' by 3 commits.
+      (use "git push" to publish your local commits)
+
+    nothing to commit, working directory clean
+    user@PC:/tmp/A/TheProject$ git log --oneline --decorate --graph
+    *   e967546 (HEAD, master) Merge branches 'a-branch' and 'b-branch'
+    |\
+    | * f9418cf (origin/b-branch, b-branch) b-branch (bob) README edit
+    * | 6e26ae4 (origin/a-branch, a-branch) a-branch change of README
+    |/
+    * e0da4fb (origin/master, origin/HEAD) alice change of README.md
+    * e69e8ec bob edited README.md
+    * 8709a34 afile.txt new file added
+    * f183325 here is the second commit
+    * e9fe842 this is my initial commit
+
+All that is left, is to push this merge commit to the "main" repo:
+
+    user@PC:/tmp/A/TheProject$ git push --all
+    Counting objects: 9, done.
+    Delta compression using up to 4 threads.
+    Compressing objects: 100% (3/3), done.
+    Writing objects: 100% (3/3), 400 bytes | 0 bytes/s, done.
+    Total 3 (delta 1), reused 0 (delta 0)
+    To /tmp/main/TheProject.git
+       e0da4fb..e967546  master -> master
+
+And - we're basically done with merging the branches. Let's just try pulling these latest commits in Bob's repo - but note that at this time, Bob's repo has the same problem as Alice's previously: the local branch `b-branch` was created in that repository; and as such it doesn't track the remote branch. That should be fixed with `git branch --set-upstream-to`:
+
+    user@PC:/tmp/B/TheProject_git$ git branch --all
+    * b-branch
+      master
+      remotes/origin/HEAD -> origin/master
+      remotes/origin/a-branch
+      remotes/origin/b-branch
+      remotes/origin/master
+    user@PC:/tmp/B/TheProject_git$ git branch -vv
+    * b-branch f9418cf b-branch (bob) README edit
+      master   e0da4fb [origin/master] alice change of README.md
+    user@PC:/tmp/B/TheProject_git$ git branch --set-upstream-to=origin/b-branch b-branch
+    Branch b-branch set up to track remote branch b-branch from origin.
+    user@PC:/tmp/B/TheProject_git$ git branch -vv
+    * b-branch f9418cf [origin/b-branch] b-branch (bob) README edit
+      master   e0da4fb [origin/master] alice change of README.md
+
+... before we try the `git pull --all`:
+
+    user@PC:/tmp/B/TheProject_git$ git pull --all
+    Fetching origin
+    remote: Counting objects: 7, done.
+    remote: Compressing objects: 100% (3/3), done.
+    remote: Total 3 (delta 1), reused 0 (delta 0)
+    Unpacking objects: 100% (3/3), done.
+    From /tmp/main/TheProject
+       e0da4fb..e967546  master     -> origin/master
+    Already up-to-date.
+    user@PC:/tmp/B/TheProject_git$ git status
+    On branch b-branch
+    Your branch is up-to-date with 'origin/b-branch'.
+
+    nothing to commit, working directory clean
+
+And finally, all seems to be fine. At this point, the state of the repositories is like this:
+
+r2/scrshot_019
+
+Note that the Git GUI clients, for all three repo directories, show graphically the same merging process in their graphs.
+
+A final note: after this process:
+
+* Alice's repo is on branch `master` (since Alice had to check out `master` in order to perform the merge)
+* Bob's repo is still on own branch `b-branch`
+
+So, if Bob continues hacking `README.md`, he will continue from the last state of the file he had in `b-branch` - meaning, he will miss the merged content of the file which is currently in `master`. So, Bob should either merge `master` into `b-branch` (resulting with a new merge commit) - or simply copy the content of the file in `master` into `b-branch` (resulting in detection of unstaged changed); so he can continue editing starting from the latest changed.
+
+Alice, on the other hand, would have to do a checkout of `a-branch` first, in order to continue in own branch - and then, make sure the `README.md` file there has the latest content, similarly to Bob (either via merge, or via copy of content).
+
+
+With this, the tutorial is concluded. Happy hacking! `:)`
+
+sdaau, 2017
