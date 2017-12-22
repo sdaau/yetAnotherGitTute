@@ -1236,3 +1236,121 @@ Note that in the screenshot, the Git GUI clients are refreshed both for "main" a
 Well, that was nice - both Alice and Bob edited the same `README.md` file, but in their own separate branches, and there were no conflicts whatsoever reported by `git`. However, now the `master` branch has neither of these contributions - and for the `master` branch to have them, we'll have to perform a manual merge.
 
 
+## Merging branches back to master
+
+Recall that here we consider the "main" repo to be a stand-in (or simulation) for a remote (online) 'bare' repository. When we have a 'bare' repository, we typically cannot perform branching or merging from the command line (although, here we could, as "main" is not a 'bare' repo). So, in a typical context, it would be either Alice or Bob that would perform the merge of changes in the branches back to master.
+
+Let's say Alice is going to perform the merge here. Again, the first thing to do is `git pull --all`, so we have the latest commits from "main":
+
+    user@PC:/tmp/A/TheProject$ git pull --all
+    Fetching origin
+    remote: Counting objects: 7, done.
+    remote: Compressing objects: 100% (3/3), done.
+    remote: Total 3 (delta 1), reused 0 (delta 0)
+    Unpacking objects: 100% (3/3), done.
+    From /tmp/main/TheProject
+     * [new branch]      b-branch   -> origin/b-branch
+    You asked to pull from the remote '--all', but did not specify
+    a branch. Because this is not the default configured remote
+    for your current branch, you must specify a branch on the command line.
+
+Ok, so apparently we did fetch all the latest commits, but here we have a new warning: "_You asked to pull from the remote '--all', but did not specify a branch..._".
+
+In fact, it turns out, this is because of a naive (mis)understanding of how `git` push and pull operations work, which was assumed throughout this tutorial: which is that `git pull --all` is a symmetrically opposite operation from `git push --all` -- and it turns out, it is **not**. This is explained in [git - Pull all branches from origin - Stack Overflow](https://stackoverflow.com/questions/24151990/pull-all-branches-from-origin):
+
+> I can say this: `git push --all origin` and it will push all branches to origin.
+> But if I do this: `git pull --all origin` then it doesn't pull all the branches from origin, it just returns an error [...]
+> Ok, I do this: `git pull --all` but yet it says: `You asked to pull from the remote '--all', but did not specify ...`
+> So how do I pull all the branches from origin (like I push all branches to origin by `git push --all origin`)?
+>
+> In what I think is a very unfortunate bit of naming, git has `fetch`, `push`, and `pull`. It sounds like `pull` is the opposite-direction equivalent of `push`, but it's not! The closest thing `push` has to an opposite is actually `fetch` (and even then they're not entirely symmetric). ...
+>  A "regular" or "local" branch name — usually just called "a branch" — like `master` has the special property that, when you check it out by branch name and then make new commits in your repository, that branch name _automatically moves forward_ to include your new commits. ...
+> Git also provides "remote branches", which (in git tradition) have a somewhat misleading name since they also live in _your_ repository, not in some other "remote" repository. These are prefixed with the name of the remote, e.g., `origin`, so you have `origin/master` as a "remote branch". Again, these are just labels for commits. Unlilke your local branches, they don't move when you make commits — but they _do_ move. They move when you use `git fetch`. ...
+> `git fetch` brings over all branches, just as `git push --all` pushes all branches. What `fetch` does _not_ do is _merge_ any of those updates into your own local branches. This is also where `fetch` and `push` stop being mirror-images of each other: _when you `push` a branch to a remote, there is no automatic renaming_. ...
+> The `git pull` script simply automates the fetch-and-merge/rebase part. But it does this with _only one branch_: whatever branch we have checked out right now.
+> If you want to merge-or-rebase multiple branches, you have to check each one out, one at a time. ...  Fortunately `git fetch origin` will update all the remote-branches at once, so you need only one `git fetch`.
+> Git generally assumes that unless you plan to _change_ something in a branch, or freeze it at a particular commit, you don't check out your own version of it.
+>
+> `git pull` will first `git fetch` everything, meaning the `origin` namespace will include all (remote tracking) branches from `origin` ...
+> But it will merge only `origin/currentBranch` to `currentBranch`.
+> It won't create the other branches.
+> If it were to create _all_ the branches from origin, your git branch would be "polluted" by the potentially many branches of the upstream repo.
+> Generally, you only want as local branches the one you will be working on.
+
+So, when we did `git pull --all` in Alice's repo, that command first called `git fetch`, which already _did_ get all remote commits locally; the warning occurs due to confusion in how to merge in those commits locally. In fact, here we assumed that `--all` argument refers to "all branches", but that is incorrect - in fact, it refers to "all remotes", as `git help pull` says:
+
+> --all
+>    Fetch all remotes.
+
+Since in this tutorial we have only one remote (`origin`), it was pointless to use `--all` as argument to `git pull` altogether. However, if we just do `git pull` in Alice's repo at this time, we'll get:
+
+    user@PC:/tmp/A/TheProject$ git pull
+    There is no tracking information for the current branch.
+    Please specify which branch you want to merge with.
+    See git-pull(1) for details
+
+        git pull <remote> <branch>
+
+    If you wish to set tracking information for this branch you can do so with:
+
+        git branch --set-upstream-to=origin/<branch> a-branch
+
+    user@PC:/tmp/A/TheProject$ git status
+    On branch a-branch
+    nothing to commit, working directory clean
+
+Since we get a complaint "There is no tracking information for the current branch", we'd want to know not just the list of local and remote branches (obtained with `git branch --all`), but [how do I get git to show me which branches are tracking what?](https://stackoverflow.com/questions/4950725/how-do-i-get-git-to-show-me-which-branches-are-tracking-what) - the answer being `git branch -vv`:
+
+    user@PC:/tmp/A/TheProject$ git branch --all
+    * a-branch
+      master
+      remotes/origin/HEAD -> origin/master
+      remotes/origin/a-branch
+      remotes/origin/b-branch
+      remotes/origin/master
+    user@PC:/tmp/A/TheProject$ git branch -vv
+    * a-branch 6e26ae4 a-branch change of README
+      master   e0da4fb [origin/master] alice change of README.md
+
+So, indeed, currently `a-branch` is considered just to be a local branch, which does _not_ track the remote `origin/a-branch` branch - even if the local repository "knows" about this remote branch. Since the current status is "On branch a-branch ; nothing to commit, working directory clean", let's checkout (switch to) `master`, and then go back to (checkout) the `a-branch` branch:
+
+    user@PC:/tmp/A/TheProject$ git checkout master
+    Switched to branch 'master'
+    Your branch is up-to-date with 'origin/master'.
+    user@PC:/tmp/A/TheProject$ git checkout a-branch
+    Switched to branch 'a-branch'
+    user@PC:/tmp/A/TheProject$ git branch -vv
+    * a-branch 6e26ae4 a-branch change of README
+      master   e0da4fb [origin/master] alice change of README.md
+
+Well, that didn't change anything. Note also that when we switched back to `a-branch` via checkout, we did _not_ get a message "Your branch is up-to-date with 'origin/..."!
+
+So, the `a-branch` in Alice's repo likely does not track a remote branch at this time, because it was _created_ in Alice's repo to begin with, -- and as such, it was _never_ pulled from "main" repo as a _new_ branch (which would, then, have set up the tracking information automatically).
+
+So, at this time, we might want to listen to the advice `git` gave us earlier, saying that "if you wish to set tracking information for this branch you can do so with":
+
+    user@PC:/tmp/A/TheProject$ git branch --set-upstream-to=origin/a-branch a-branch
+    Branch a-branch set up to track remote branch a-branch from origin.
+
+Let's check the branch tracking info now:
+
+    user@PC:/tmp/A/TheProject$ git branch -vv
+    * a-branch 6e26ae4 [origin/a-branch] a-branch change of README
+      master   e0da4fb [origin/master] alice change of README.md
+    user@PC:/tmp/A/TheProject$ git checkout master
+    Switched to branch 'master'
+    Your branch is up-to-date with 'origin/master'.
+    user@PC:/tmp/A/TheProject$ git checkout a-branch
+    Switched to branch 'a-branch'
+    Your branch is up-to-date with 'origin/a-branch'.
+
+Ah - that's more like it; now we can see our local `a-branch` tracks the remote `origin/a-branch` - and indeed, when we check it out, now we can see the "Your branch is up-to-date with 'origin/a-branch'" message. So if we do a:
+
+    user@PC:/tmp/A/TheProject$ git pull --all
+    Fetching origin
+    Already up-to-date.
+
+... there is no warning anymore.
+
+So let's get back to the topic now - which was merging the commits in `a-branch` and `b-branch` in the `master` branch.
+
