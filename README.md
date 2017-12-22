@@ -2,6 +2,24 @@
 
 This is a brief tutorial on the SCM ([Source Control or Source Code Management](https://en.wikipedia.org/wiki/Source_control_management)) - aka VCS (Version Control System) - software [`git`](https://en.wikipedia.org/wiki/Git). It will focus on an offline (local) demonstration of basic operations, as well as conflicts and resolving them.
 
+Table of contents:
+
+* [The "main" repository - initializing](#the-main-repository---initializing)
+* [The "main" repository - first commit](#the-main-repository---first-commit)
+* [A bit on Markdown and text editors](#a-bit-on-markdown-and-text-editors)
+* [A bit on Git history log, and commit hashes as labels](#a-bit-on-git-history-log-and-commit-hashes-as-labels)
+* [The "main" repository - a bit on resetting staging, and second commit](#the-main-repository---a-bit-on-resetting-staging-and-second-commit)
+* [Alice and Bob start - cloning and remotes](#alice-and-bob-start---cloning-and-remotes)
+* [Alice starts hacking - push](#alice-starts-hacking---push)
+* [Bob starts hacking - push and pull and automerge abort and rebase](#bob-starts-hacking---push-and-pull-and-automerge-abort-and-rebase)
+* [Alice keeps hacking - file content-level conflict, and mergetool resolution](#alice-keeps-hacking---file-content-level-conflict-and-mergetool-resolution)
+* [Reset and checkout of "main" repo - moving through commit history](#reset-and-checkout-of-main-repo---moving-through-commit-history)
+* [Multiple users with own branches](#multiple-users-with-own-branches)
+* [Alice branches out](#alice-branches-out)
+* [Bob branches out](#bob-branches-out)
+* [Merging branches back to master - branch upstream tracking, octopus merge](#merging-branches-back-to-master---branch-upstream-tracking-octopus-merge)
+
+
 Crudely speaking, SCM/VCS allows one to track history of changes of files in a directory - the user creates, modifies or deletes files inside this directory; and the user can choose, at any time, to record the current state of the files in history by _committing_ them, the recorded state being known as a _commit_.
 
 As more commits are added to the history, an SCM/VCS allows that the exact state of a previous commit can be restored in the working directory - which is particularly useful in software coding; say, in cases when a bug has been introduced by a more recent change (which should otherwise introduce a new feature). Such a directory, with contents with tracked history, is typically referred to as a _project_ or a _repository_ (that is, "repo").
